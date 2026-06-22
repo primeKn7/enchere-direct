@@ -1,0 +1,442 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── ENUMS ───────────────────────────────────────────
+
+enum Role {
+  CITOYEN
+  ENTREPRISE
+  COMMISSAIRE_PRISEUR
+  AGENT_AES
+  MAGISTRAT
+  DOUANIER
+  TRESOR_PUBLIC
+  ADMINISTRATEUR
+}
+
+enum StatutDossier {
+  EN_ATTENTE
+  CONFORME
+  NON_CONFORME
+  VALIDE
+  CLOTURE
+}
+
+enum StatutEnchere {
+  PLANIFIEE
+  EN_COURS
+  PROLONGEE
+  CLOTUREE
+  ANNULEE
+}
+
+enum TypeEnchere {
+  ASCENDANTE
+  DESCENDANTE
+  SCELLEE
+  VENTE_DIRECTE
+}
+
+enum StatutOffre {
+  EN_ATTENTE
+  ACCEPTEE
+  OUTBID
+  GAGNANTE
+  ANNULEE
+}
+
+enum StatutPaiement {
+  EN_ATTENTE
+  BLOQUE
+  CONFIRME
+  REMBOURSE
+  ECHOUE
+}
+
+enum StatutGarantie {
+  ACTIVE
+  LIBEREE
+  TRANSFORMEE_ACOMPTE
+  CONFISQUEE
+}
+
+// ─── IAM ─────────────────────────────────────────────
+
+model Utilisateur {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  motDePasseHash    String
+  nom               String
+  prenom            String
+  telephone         String?
+  role              Role      @default(CITOYEN)
+  mfaActif          Boolean   @default(false)
+  biometrieActif    Boolean   @default(false)
+  compteVerifie     Boolean   @default(false)
+  compteBloque      Boolean   @default(false)
+  tentativesEchec   Int       @default(0)
+  derniereConnexion DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations spécifiques par rôle
+  numeroCNI         String?   // Citoyen
+  numeroRCCM        String?   // Entreprise
+  raisonSociale     String?   // Entreprise
+  numeroAgrement    String?   // Commissaire-Priseur / Expert
+  jurisdiction      String?   // Magistrat
+  posteAffectation  String?   // Douanier
+
+  sessions          Session[]
+  otpCodes          OtpCode[]
+  offres            Offre[]
+  journalAudits     JournalAudit[]
+  portefeuille      Portefeuille?
+  dossiersCrees     DossierSaisie[]
+  encheresDirigees  Enchere[]        @relation("CommissairePriseur")
+
+  @@index([email])
+  @@index([role])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  token        String   @unique
+  ipAddress    String
+  userAgent    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  utilisateur  Utilisateur @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+model OtpCode {
+  id          String   @id @default(uuid())
+  userId      String
+  code        String
+  canal       String   // SMS | EMAIL
+  expiresAt   DateTime
+  utilise     Boolean  @default(false)
+  tentatives  Int      @default(0)
+  createdAt   DateTime @default(now())
+  utilisateur Utilisateur @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── SAISIES ─────────────────────────────────────────
+
+model DossierSaisie {
+  id                   String        @id @default(uuid())
+  referenceJudiciaire  String        @unique
+  jurisdictionCompetente String
+  dateSaisie           DateTime
+  statut               StatutDossier @default(EN_ATTENTE)
+  agentAesId           String
+  magistratId          String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  agentAes   Utilisateur @relation(fields: [agentAesId], references: [id])
+  documents  DocumentGED[]
+  biens      BienSaisi[]
+
+  @@index([referenceJudiciaire])
+  @@index([statut])
+}
+
+model DocumentGED {
+  id            String        @id @default(uuid())
+  dossierId     String
+  type          String        // PV_SAISIE | JUGEMENT | ORDONNANCE | EXPERTISE
+  format        String        // PDF | DOCX | IMAGE | VIDEO
+  urlStockage   String
+  nomFichier    String
+  tailleFichier Int
+  hashSHA256    String        // intégrité du fichier
+  archive       Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  dossier       DossierSaisie @relation(fields: [dossierId], references: [id])
+
+  @@index([dossierId])
+}
+
+model BienSaisi {
+  id             String        @id @default(uuid())
+  dossierId      String
+  categorie      String
+  sousCategorie  String?
+  description    String        @db.Text
+  valeurEstimee  Decimal       @db.Decimal(15, 2)
+  localisation   String
+  etatGeneral    String
+  qrCode         String?       @unique
+  rfid           String?       @unique
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  dossier       DossierSaisie   @relation(fields: [dossierId], references: [id])
+  medias        MediaHD[]
+  expertises    RapportExpertise[]
+  estimationIA  EstimationIA?
+  lot           Lot?
+
+  @@index([dossierId])
+}
+
+model MediaHD {
+  id         String    @id @default(uuid())
+  bienId     String
+  type       String    // PHOTO | VIDEO | VUE_360 | VISITE_VIRTUELLE
+  url        String
+  vue360     Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  bien       BienSaisi @relation(fields: [bienId], references: [id])
+}
+
+model RapportExpertise {
+  id               String    @id @default(uuid())
+  bienId           String
+  expertId         String
+  valeurEstimee    Decimal   @db.Decimal(15, 2)
+  statutValidation String    @default("EN_ATTENTE")
+  contenu          String    @db.Text
+  createdAt        DateTime  @default(now())
+  bien             BienSaisi @relation(fields: [bienId], references: [id])
+
+  @@index([bienId])
+}
+
+model EstimationIA {
+  id              String    @id @default(uuid())
+  bienId          String    @unique
+  valeurPredite   Decimal   @db.Decimal(15, 2)
+  indiceConfiance Float
+  parametres      Json
+  createdAt       DateTime  @default(now())
+  bien            BienSaisi @relation(fields: [bienId], references: [id])
+}
+
+// ─── CATALOGUE & LOTS ────────────────────────────────
+
+model Lot {
+  id            String   @id @default(uuid())
+  bienId        String   @unique
+  numeroLot     String   @unique
+  prixDepart    Decimal  @db.Decimal(15, 2)
+  typeEnchere   TypeEnchere
+  publie        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  bien          BienSaisi @relation(fields: [bienId], references: [id])
+  enchere       Enchere?
+
+  @@index([publie])
+}
+
+// ─── ENCHÈRES ────────────────────────────────────────
+
+model Enchere {
+  id                    String        @id @default(uuid())
+  lotId                 String        @unique
+  commissairePriseurId  String
+  type                  TypeEnchere
+  dateDebut             DateTime
+  dateFin               DateTime
+  montantActuel         Decimal       @db.Decimal(15, 2)
+  montantReserve        Decimal       @db.Decimal(15, 2)
+  pourcentageGarantie   Float         @default(10)
+  statut                StatutEnchere @default(PLANIFIEE)
+  antiSnipingDelai      Int           @default(120) // secondes
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  lot               Lot           @relation(fields: [lotId], references: [id])
+  commissairePriseur Utilisateur   @relation("CommissairePriseur", fields: [commissairePriseurId], references: [id])
+  offres            Offre[]
+  adjudication      Adjudication?
+  venteLive         VenteLive?
+
+  @@index([statut])
+  @@index([dateDebut])
+}
+
+model Offre {
+  id           String      @id @default(uuid())
+  enchereId    String
+  utilisateurId String
+  montant      Decimal     @db.Decimal(15, 2)
+  statut       StatutOffre @default(EN_ATTENTE)
+  adresseIP    String
+  userAgent    String?
+  createdAt    DateTime    @default(now())
+
+  enchere      Enchere     @relation(fields: [enchereId], references: [id])
+  utilisateur  Utilisateur @relation(fields: [utilisateurId], references: [id])
+  garantie     GarantieFinanciere?
+  surenchere   SurenchereAuto?
+
+  @@index([enchereId])
+  @@index([utilisateurId])
+}
+
+model SurenchereAuto {
+  id              String   @id @default(uuid())
+  offreId         String   @unique
+  plafondMaximal  Decimal  @db.Decimal(15, 2)
+  increment       Decimal  @db.Decimal(15, 2)
+  actif           Boolean  @default(true)
+  offre           Offre    @relation(fields: [offreId], references: [id])
+}
+
+// ─── LIVE AUCTION ─────────────────────────────────────
+
+model VenteLive {
+  id              String   @id @default(uuid())
+  enchereId       String   @unique
+  capaciteMax     Int      @default(10000)
+  nbParticipants  Int      @default(0)
+  latenceMs       Int      @default(500)
+  streamUrl       String?
+  actif           Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  enchere         Enchere  @relation(fields: [enchereId], references: [id])
+  archive         ArchiveLive?
+  messages        MessageChat[]
+}
+
+model MessageChat {
+  id          String    @id @default(uuid())
+  venteId     String
+  auteurId    String
+  contenu     String    @db.Text
+  modere      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  vente       VenteLive @relation(fields: [venteId], references: [id])
+
+  @@index([venteId])
+}
+
+model ArchiveLive {
+  id            String    @id @default(uuid())
+  venteId       String    @unique
+  urlVideo      String
+  journalOffres Json
+  createdAt     DateTime  @default(now())
+  vente         VenteLive @relation(fields: [venteId], references: [id])
+}
+
+// ─── PAIEMENT & GARANTIE ──────────────────────────────
+
+model Portefeuille {
+  id               String   @id @default(uuid())
+  utilisateurId    String   @unique
+  soldeDisponible  Decimal  @db.Decimal(15, 2) @default(0)
+  soldeBloque      Decimal  @db.Decimal(15, 2) @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  utilisateur      Utilisateur @relation(fields: [utilisateurId], references: [id])
+  transactions     TransactionSPI[]
+  garanties        GarantieFinanciere[]
+}
+
+model GarantieFinanciere {
+  id               String         @id @default(uuid())
+  offreId          String         @unique
+  portefeuilleId   String
+  montantCaution   Decimal        @db.Decimal(15, 2)
+  pourcentageExige Float
+  statut           StatutGarantie @default(ACTIVE)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  offre            Offre          @relation(fields: [offreId], references: [id])
+  portefeuille     Portefeuille   @relation(fields: [portefeuilleId], references: [id])
+}
+
+model TransactionSPI {
+  id             String         @id @default(uuid())
+  portefeuilleId String
+  reference      String         @unique
+  montant        Decimal        @db.Decimal(15, 2)
+  type           String         // CREDIT | DEBIT | BLOCAGE | DEBLOCAGE
+  statut         StatutPaiement @default(EN_ATTENTE)
+  canal          String         // SPI_BCEAO | MOBILE_MONEY | VIREMENT
+  metadata       Json?
+  createdAt      DateTime       @default(now())
+  portefeuille   Portefeuille   @relation(fields: [portefeuilleId], references: [id])
+
+  @@index([reference])
+  @@index([portefeuilleId])
+}
+
+// ─── ADJUDICATION ─────────────────────────────────────
+
+model Adjudication {
+  id               String    @id @default(uuid())
+  enchereId        String    @unique
+  adjudicataireId  String
+  montantFinal     Decimal   @db.Decimal(15, 2)
+  dateAdjudication DateTime  @default(now())
+  paiements        Paiement[]
+  documentsLegaux  DocumentLegal[]
+  enchere          Enchere   @relation(fields: [enchereId], references: [id])
+}
+
+model Paiement {
+  id             String         @id @default(uuid())
+  adjudicationId String
+  canal          String
+  montant        Decimal        @db.Decimal(15, 2)
+  statut         StatutPaiement @default(EN_ATTENTE)
+  reference      String         @unique @default(uuid())
+  createdAt      DateTime       @default(now())
+  adjudication   Adjudication   @relation(fields: [adjudicationId], references: [id])
+}
+
+model DocumentLegal {
+  id                   String       @id @default(uuid())
+  adjudicationId       String
+  type                 String       // PV_ADJUDICATION | BORDEREAU_RETRAIT | CERTIFICAT
+  signatureElectronique String
+  hashSHA256           String
+  url                  String
+  valide               Boolean      @default(false)
+  createdAt            DateTime     @default(now())
+  adjudication         Adjudication @relation(fields: [adjudicationId], references: [id])
+}
+
+// ─── TRAÇABILITÉ ──────────────────────────────────────
+
+model JournalAudit {
+  id            String      @id @default(uuid())
+  utilisateurId String?
+  action        String
+  entite        String
+  entiteId      String?
+  ancienneValeur Json?
+  nouvelleValeur Json?
+  adresseIP     String
+  userAgent     String?
+  horodatage    DateTime    @default(now())
+  utilisateur   Utilisateur? @relation(fields: [utilisateurId], references: [id])
+
+  @@index([utilisateurId])
+  @@index([entite, entiteId])
+  @@index([horodatage])
+}
+
+model AlerteFraude {
+  id          String   @id @default(uuid())
+  type        String   // COLLUSION | MULTI_COMPTE | MANIPULATION_COURS
+  score       Float
+  details     Json
+  traite      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
