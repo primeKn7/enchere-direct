@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { MapPin, Clock } from "lucide-react";
+import { MapPin, Clock, Gavel, Plus } from "lucide-react";
 import EmptyState from "@/components/ui/EmptyState";
+import { useSession } from "next-auth/react";
 
 interface Enchere {
   id: string;
@@ -19,8 +20,12 @@ interface Enchere {
 }
 
 export default function EncheresPage() {
+  const { data: session } = useSession();
   const [encheres, setEncheres] = useState<Enchere[]>([]);
   const [loaded, setLoaded] = useState(false);
+
+  const role = session?.user?.role;
+  const canCreate = role === "COMMISSAIRE_PRISEUR" || role === "ADMINISTRATEUR";
 
   useEffect(() => {
     fetch("/api/encheres")
@@ -33,7 +38,17 @@ export default function EncheresPage() {
 
   return (
     <div>
-      <h1 className="mb-8">Enchères</h1>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <Gavel size={28} className="text-[var(--accent)]" />
+          <h1 className="text-[var(--ink)]">Enchères</h1>
+        </div>
+        {canCreate && (
+          <Link href="/dashboard/encheres/nouveau" className="btn btn-primary">
+            <Plus size={16} /> Nouvelle enchère
+          </Link>
+        )}
+      </div>
 
       {loaded && encheres.length === 0 ? (
         <EmptyState

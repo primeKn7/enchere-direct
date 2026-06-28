@@ -61,6 +61,9 @@ export const dossierSaisieSchema = z.object({
   referenceJudiciaire: z.string().min(3).max(100),
   jurisdictionCompetente: z.string().min(2).max(200),
   dateSaisie: z.string().datetime({ message: 'Date ISO 8601 requise.' }),
+  identiteProprietaire: z.string().min(2, 'Identité du propriétaire requise.').max(300),
+  creancier: z.string().min(2, 'Créancier requis.').max(300),
+  huissierInstrumentaire: z.string().min(2, 'Huissier instrumentaire requis.').max(300),
   magistratId: z.string().uuid().optional(),
 })
 
@@ -78,6 +81,27 @@ export const updateDossierSchema = z.object({
   statut: z.nativeEnum(StatutDossier),
 })
 
+export const bienSaisiSchema = z.object({
+  dossierId: z.string().uuid('ID de dossier invalide.'),
+  categorie: z.string().min(2, 'Catégorie requise.').max(100),
+  sousCategorie: z.string().max(100).optional(),
+  description: z.string().min(10, 'Description trop courte (min 10 caractères).').max(5000),
+  valeurEstimee: decimalLike,
+  localisation: z.string().min(2, 'Localisation requise.').max(500),
+  etatGeneral: z.string().min(2, 'État général requis.').max(200),
+  rfid: z.string().max(100).optional(),
+})
+
+export const updateBienSchema = z.object({
+  categorie: z.string().min(2).max(100).optional(),
+  sousCategorie: z.string().max(100).optional(),
+  description: z.string().min(10).max(5000).optional(),
+  valeurEstimee: decimalLike.optional(),
+  localisation: z.string().min(2).max(500).optional(),
+  etatGeneral: z.string().min(2).max(200).optional(),
+  rfid: z.string().max(100).optional(),
+})
+
 export const verifyOtpSchema = z.object({
   email: z.string().email(),
   code: z.string().length(6, 'Le code doit comporter 6 chiffres.').regex(/^\d+$/),
@@ -87,3 +111,4 @@ export type LoginInput = z.infer<typeof loginSchema>
 export type RegisterInput = z.infer<typeof registerSchema>
 export type OffreInput = z.infer<typeof offreSchema>
 export type DossierSaisieInput = z.infer<typeof dossierSaisieSchema>
+export type BienSaisiInput = z.infer<typeof bienSaisiSchema>

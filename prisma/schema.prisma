@@ -135,15 +135,18 @@ model OtpCode {
 // ─── SAISIES ─────────────────────────────────────────
 
 model DossierSaisie {
-  id                   String        @id @default(uuid())
-  referenceJudiciaire  String        @unique
+  id                     String        @id @default(uuid())
+  referenceJudiciaire    String        @unique
   jurisdictionCompetente String
-  dateSaisie           DateTime
-  statut               StatutDossier @default(EN_ATTENTE)
-  agentAesId           String
-  magistratId          String?
-  createdAt            DateTime      @default(now())
-  updatedAt            DateTime      @updatedAt
+  dateSaisie             DateTime
+  identiteProprietaire   String
+  creancier              String
+  huissierInstrumentaire String
+  statut                 StatutDossier @default(EN_ATTENTE)
+  agentAesId             String
+  magistratId            String?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
 
   agentAes   Utilisateur @relation(fields: [agentAesId], references: [id])
   documents  DocumentGED[]
@@ -179,6 +182,8 @@ model BienSaisi {
   localisation   String
   etatGeneral    String
   qrCode         String?       @unique
+  qrCodeDataUrl  String?       @db.Text
+  codeBarre      String?       @unique
   rfid           String?       @unique
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt

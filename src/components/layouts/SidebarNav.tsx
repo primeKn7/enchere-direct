@@ -55,31 +55,9 @@ export default function SidebarNav({ items }: { items: NavItem[] }) {
           <Link
             key={item.href}
             href={item.href}
-            className="group relative flex items-center gap-3 px-3 py-[7px] rounded-[var(--radius-md)] text-[14px] transition-colors"
-            style={{
-              color: active ? "var(--ink)" : "var(--ink-muted)",
-              background: active ? "var(--surface-sunken)" : "transparent",
-              fontWeight: active ? 500 : 400,
-            }}
-            onMouseEnter={(e) => {
-              if (!active) {
-                e.currentTarget.style.background = "var(--surface-sunken)";
-                e.currentTarget.style.color = "var(--ink-secondary)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!active) {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = "var(--ink-muted)";
-              }
-            }}
+            className={`nav-link ${active ? "nav-link-active" : ""}`}
           >
-            {active && (
-              <span
-                className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-4 rounded-r"
-                style={{ background: "var(--accent)" }}
-              />
-            )}
+            {active && <span className="nav-link-indicator" />}
             <Icon size={16} strokeWidth={active ? 2 : 1.5} />
             <span>{item.label}</span>
           </Link>

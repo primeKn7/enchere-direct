@@ -41,7 +41,14 @@ export async function GET(request: NextRequest) {
         where: { id: user.id },
         select: { jurisdiction: true },
       })
-      where = { jurisdictionCompetente: utilisateur?.jurisdiction ?? '' }
+      where = {
+        OR: [
+          { magistratId: user.id },
+          ...(utilisateur?.jurisdiction
+            ? [{ jurisdictionCompetente: { equals: utilisateur.jurisdiction, mode: 'insensitive' } }]
+            : []),
+        ],
+      }
     } else if (user.role === Role.CITOYEN || user.role === Role.ENTREPRISE) {
       return NextResponse.json({ data: [] }, { status: 200 })
     }
@@ -113,6 +120,9 @@ export async function POST(request: NextRequest) {
         referenceJudiciaire: data.referenceJudiciaire,
         jurisdictionCompetente: data.jurisdictionCompetente,
         dateSaisie: new Date(data.dateSaisie),
+        identiteProprietaire: data.identiteProprietaire,
+        creancier: data.creancier,
+        huissierInstrumentaire: data.huissierInstrumentaire,
         agentAesId: user.id,
         magistratId: data.magistratId,
       },
@@ -129,7 +139,8 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({ data: dossier }, { status: 201 })
-  } catch {
+  } catch (err) {
+    console.error('POST /api/saisies error:', err)
     return NextResponse.json({ error: 'Erreur interne.' }, { status: 500 })
   }
 }

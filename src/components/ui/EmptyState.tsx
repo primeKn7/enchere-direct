@@ -65,27 +65,31 @@ function Illustration({ type }: { type: NonNullable<EmptyStateProps["illustratio
 
 export default function EmptyState({ title, description, action, illustration = "list" }: EmptyStateProps) {
   return (
-    <div className="card py-12 px-6 flex flex-col items-center text-center">
-      <div className="mb-4">
+    <div className="card py-14 px-6 flex flex-col items-center text-center">
+      <div
+        className="mb-5 flex items-center justify-center rounded-full"
+        style={{
+          width: 72,
+          height: 72,
+          background: "var(--accent-subtle)",
+        }}
+      >
         <Illustration type={illustration} />
       </div>
       <p
-        className="text-[16px] font-medium mb-1"
+        className="text-[15px] font-semibold mb-2"
         style={{ color: "var(--ink)" }}
       >
         {title}
       </p>
       <p
-        className="text-[14px] max-w-sm"
-        style={{ color: "var(--ink-muted)" }}
+        className="text-[14px] max-w-[320px] leading-relaxed"
+        style={{ color: "var(--ink-secondary)" }}
       >
         {description}
       </p>
       {action && (
-        <Link
-          href={action.href}
-          className="btn btn-primary btn-sm mt-5"
-        >
+        <Link href={action.href} className="btn btn-primary btn-sm mt-6">
           {action.label}
         </Link>
       )}
