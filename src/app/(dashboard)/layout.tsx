@@ -133,7 +133,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 lg:ml-[240px]">
+      <div className="flex-1 min-w-0 lg:ml-[240px]">
         {/* Mobile header */}
         <header
           className="sticky top-0 z-40 h-[52px] lg:hidden flex items-center justify-between px-4"

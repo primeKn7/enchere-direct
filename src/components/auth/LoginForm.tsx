@@ -51,6 +51,7 @@ export default function LoginForm() {
           otp_invalid: "Code de vérification incorrect.",
           otp_max_attempts: "Trop de tentatives. Réessayez plus tard.",
           account_blocked: "Votre compte est bloqué. Contactez l'administrateur.",
+          too_many_attempts: "Trop de tentatives de connexion. Réessayez dans quelques minutes.",
         };
         setError(messages[errorCode] ?? `Erreur : ${errorCode}`);
         return;

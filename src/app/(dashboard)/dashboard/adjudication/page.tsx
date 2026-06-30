@@ -31,7 +31,7 @@ export default async function AdjudicationPage() {
           action={{ label: "Voir les enchères", href: "/dashboard/encheres" }}
         />
       ) : (
-        <div className="card overflow-hidden">
+        <div className="card overflow-x-auto">
           <table className="table">
             <thead>
               <tr>

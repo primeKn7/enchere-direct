@@ -90,7 +90,7 @@ export default function EncheresPage() {
           action={{ label: "Voir le catalogue", href: "/dashboard/catalogue" }}
         />
       ) : (
-        <div className="card overflow-hidden">
+        <div className="card overflow-x-auto">
           <table className="table">
             <thead>
               <tr>

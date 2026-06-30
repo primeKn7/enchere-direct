@@ -255,6 +255,21 @@ export async function POST(
       )
     }
 
+    // KYC obligatoire pour enchérir + compte non bloqué (lu en base, pas dans le token).
+    const enicherisseur = await prisma.utilisateur.findUnique({
+      where: { id: user.id },
+      select: { compteVerifie: true, compteBloque: true },
+    })
+    if (!enicherisseur || enicherisseur.compteBloque) {
+      return NextResponse.json({ error: 'Compte bloqué.' }, { status: 403 })
+    }
+    if (!enicherisseur.compteVerifie) {
+      return NextResponse.json(
+        { error: 'Vous devez vérifier votre identité (KYC) avant d’enchérir.' },
+        { status: 403 }
+      )
+    }
+
     const now = new Date()
     if (
       enchere.dateDebut > now ||

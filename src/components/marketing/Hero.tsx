@@ -26,16 +26,15 @@ export function Hero() {
 
   return (
     <section
-      className="relative overflow-hidden"
+      className="relative overflow-hidden lg:min-h-[88vh]"
       style={{
         background:
           "radial-gradient(120% 130% at 0% 0%, rgba(10,42,56,0.95) 0%, rgba(10,42,56,0) 52%), linear-gradient(to left, #1A5A7A 0%, #0F3C4D 55%, #0A2A38 100%)",
-        minHeight: "88vh",
       }}
     >
-      {/* Background texture */}
+      {/* Texture plein écran — desktop uniquement (comportement d'origine) */}
       <div
-        className="absolute inset-0 opacity-[0.04]"
+        className="absolute inset-0 opacity-[0.04] pointer-events-none hidden lg:block"
         style={{
           backgroundImage:
             "radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)",
@@ -44,9 +43,18 @@ export function Hero() {
       />
 
       <div
-        className="container-app relative py-20 lg:py-28"
+        className="container-app relative pt-20 pb-[45px] lg:py-28"
         style={{ paddingInline: "clamp(1.5rem, 4vw, 2.25rem)" }}
       >
+        {/* Texture bornée au conteneur — mobile uniquement (finit où le conteneur finit) */}
+        <div
+          className="absolute inset-0 opacity-[0.04] pointer-events-none lg:hidden"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
+          }}
+        />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Left: text + search */}
           <div className="marketing">

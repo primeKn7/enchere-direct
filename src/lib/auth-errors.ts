@@ -23,3 +23,7 @@ export class OTPMaxAttemptsError extends CredentialsSignin {
 export class AccountBlockedError extends CredentialsSignin {
   code = 'account_blocked'
 }
+
+export class TooManyAttemptsError extends CredentialsSignin {
+  code = 'too_many_attempts'
+}

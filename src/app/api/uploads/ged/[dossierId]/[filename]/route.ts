@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 import { getSessionOrUnauthorized } from '@/lib/api-helpers'
+import { canAccessDossier } from '@/lib/dossier-access'
+import { Role } from '@prisma/client'
 
 const MIME_TYPES: Record<string, string> = {
   pdf: 'application/pdf',
@@ -27,6 +29,13 @@ export async function GET(
   const { dossierId, filename } = await params
 
   if (filename.includes('..') || dossierId.includes('..')) {
+    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+  }
+
+  // Les pièces GED sont des documents judiciaires : on vérifie que l'utilisateur
+  // a bien accès à ce dossier (agent/admin, ou magistrat de la juridiction).
+  const accessible = await canAccessDossier(session.user.id, session.user.role as Role, dossierId)
+  if (!accessible) {
     return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
   }
 

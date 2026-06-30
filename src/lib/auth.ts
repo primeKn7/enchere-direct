@@ -14,7 +14,9 @@ import {
   OTPInvalidError,
   OTPMaxAttemptsError,
   AccountBlockedError,
+  TooManyAttemptsError,
 } from '@/lib/auth-errors'
+import { peekRateLimit, checkRateLimit } from '@/lib/rate-limiter'
 
 const getRequestMetadata = async () => {
   const h = await headers()
@@ -46,14 +48,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         const { email, password } = parsed.data
-        console.log('[LOGIN] Tentative pour:', email.toLowerCase())
+        const emailLc = email.toLowerCase()
+        console.log('[LOGIN] Tentative pour:', emailLc)
+
+        // Throttle temporaire (jamais un blocage permanent) : on vérifie d'abord
+        // si la limite est atteinte SANS consommer (peek), puis on ne consomme un
+        // point que sur un échec. Une connexion réussie ne pénalise rien.
+        const { ip } = await getRequestMetadata()
+        const keyEmail = `login:${emailLc}`
+        const keyIp = `login-ip:${ip}`
+        const consumeOnFailure = async () => {
+          await Promise.all([
+            checkRateLimit(keyEmail, 'authLimiter'),
+            checkRateLimit(keyIp, 'authLimiter'),
+          ])
+        }
+        const [peekEmail, peekIp] = await Promise.all([
+          peekRateLimit(keyEmail, 'authLimiter'),
+          peekRateLimit(keyIp, 'authLimiter'),
+        ])
+        if (peekEmail.blocked || peekIp.blocked) {
+          console.log('[LOGIN] Throttle: trop de tentatives pour', emailLc)
+          throw new TooManyAttemptsError()
+        }
 
         const utilisateur = await prisma.utilisateur.findUnique({
-          where: { email: email.toLowerCase() },
+          where: { email: emailLc },
         })
 
         if (!utilisateur) {
-          console.log('[LOGIN] Utilisateur non trouvé:', email.toLowerCase())
+          console.log('[LOGIN] Utilisateur non trouvé:', emailLc)
+          await consumeOnFailure()
           throw new CredentialsInvalidError()
         }
 
@@ -68,6 +93,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         console.log('[LOGIN] Mot de passe valide:', passwordValid)
 
         if (!passwordValid) {
+          await consumeOnFailure()
           await prisma.utilisateur.update({
             where: { id: utilisateur.id },
             data: { tentativesEchec: { increment: 1 } },

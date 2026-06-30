@@ -38,3 +38,22 @@ export async function checkRateLimit(
     return { allowed: false }
   }
 }
+
+/**
+ * Consulte l'état d'une clé SANS consommer de point.
+ * Utile pour throttler les connexions : on ne pénalise que les échecs (consume),
+ * mais on vérifie le blocage à chaque tentative (peek). Ainsi une connexion
+ * réussie ne décompte rien, et le throttle est temporaire (jamais un blocage
+ * permanent du compte).
+ */
+export async function peekRateLimit(
+  key: string,
+  limiterName: LimiterName
+): Promise<{ blocked: boolean; msBeforeNext?: number }> {
+  const limiter = limiters[limiterName]
+  const res = await limiter.get(key)
+  if (res && res.remainingPoints <= 0) {
+    return { blocked: true, msBeforeNext: res.msBeforeNext }
+  }
+  return { blocked: false }
+}

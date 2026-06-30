@@ -128,7 +128,7 @@ async function CitoyenDashboard({ userId }: { userId: string }) {
             action={{ label: "Explorer le catalogue", href: "/dashboard/catalogue" }}
           />
         ) : (
-          <div className="card overflow-hidden">
+          <div className="card overflow-x-auto">
             <table className="table">
               <thead>
                 <tr>
@@ -175,7 +175,7 @@ async function CitoyenDashboard({ userId }: { userId: string }) {
             action={{ label: "Voir les enchères", href: "/dashboard/encheres" }}
           />
         ) : (
-          <div className="card overflow-hidden">
+          <div className="card overflow-x-auto">
             <table className="table">
               <thead>
                 <tr>
@@ -245,7 +245,7 @@ async function CommissaireDashboard({ userId }: { userId: string }) {
             illustration="auction"
           />
         ) : (
-          <div className="card overflow-hidden">
+          <div className="card overflow-x-auto">
             <table className="table">
               <thead>
                 <tr>
