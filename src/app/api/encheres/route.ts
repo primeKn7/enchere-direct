@@ -8,6 +8,7 @@ import {
   requirePermission,
 } from '@/lib/api-helpers'
 import { enchereCreateSchema } from '@/lib/validators'
+import { syncEncheresStatuts } from '@/lib/enchere-statut'
 import { Role, StatutEnchere } from '@prisma/client'
 
 export async function GET(request: NextRequest) {
@@ -34,10 +35,18 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Met à jour les statuts (démarrage / clôture) avant de lister.
+    await syncEncheresStatuts()
+
+    const mine = new URL(request.url).searchParams.get('mine') === 'true'
+
     let where: Record<string, unknown> = {}
 
     if (user.role === Role.CITOYEN || user.role === Role.ENTREPRISE) {
-      where = { statut: { in: [StatutEnchere.EN_COURS, StatutEnchere.PROLONGEE] }, lot: { publie: true } }
+      where = mine
+        ? // « Mes enchères » : celles où l'utilisateur a déposé au moins une offre.
+          { offres: { some: { utilisateurId: user.id } } }
+        : { statut: { in: [StatutEnchere.EN_COURS, StatutEnchere.PROLONGEE] }, lot: { publie: true } }
     } else if (user.role === Role.COMMISSAIRE_PRISEUR) {
       where = { commissairePriseurId: user.id }
     }

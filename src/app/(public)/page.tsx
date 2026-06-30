@@ -1,93 +1,97 @@
+"use client";
+
 import { Hero } from "@/components/marketing/Hero";
 import { AuctionCard } from "@/components/marketing/AuctionCard";
 import { getActiveAuctions } from "@/lib/demo-data";
 import Link from "next/link";
 import { Gavel, UserCircle, Wallet, Truck, ArrowRight } from "lucide-react";
+import { useT } from "@/components/providers/LanguageProvider";
 
 export default function HomePage() {
-  const activeAuctions = getActiveAuctions(6);
+  const t = useT();
+  const latestAuctions = getActiveAuctions(3);
 
   const steps = [
-    {
-      icon: UserCircle,
-      title: "Créez un compte",
-      description: "Inscrivez-vous gratuitement et complétez la vérification d'identité",
-    },
-    {
-      icon: Wallet,
-      title: "Déposez des fonds",
-      description: "Créditez votre compte pour enchérir",
-    },
-    {
-      icon: Gavel,
-      title: "Enchérissez & Gagnez",
-      description: "Participez aux ventes en direct et gagnez des objets",
-    },
-    {
-      icon: Truck,
-      title: "Payez & Recevez",
-      description: "Payez votre objet et recevez-le",
-    },
+    { icon: UserCircle, title: t("how.step1.title"), description: t("how.step1.desc") },
+    { icon: Wallet, title: t("how.step2.title"), description: t("how.step2.desc") },
+    { icon: Gavel, title: t("how.step3.title"), description: t("how.step3.desc") },
+    { icon: Truck, title: t("how.step4.title"), description: t("how.step4.desc") },
   ];
 
   return (
     <>
       <Hero />
 
+      {/* Dernières ventes */}
       <section className="py-20" style={{ background: "var(--surface-base)" }}>
         <div className="container-app">
-          <div className="text-center mb-12">
-            <h2 className="text-[var(--ink)] mb-3">Dernières ventes</h2>
-            <p className="text-[var(--ink-secondary)] text-lg">
-              Les objets les plus récents mis en vente
-            </p>
+          <div className="flex items-center justify-between mb-10">
+            <div>
+              <div className="mb-3">
+                <span className="eyebrow-pill">{t("home.nowLabel")}</span>
+              </div>
+              <h2 className="marketing" style={{ fontSize: "28px", fontWeight: 700, letterSpacing: "-0.015em", color: "var(--ink)" }}>
+                {t("home.latestSales")}
+              </h2>
+            </div>
+            <Link href="/catalogue" className="btn btn-secondary btn-sm">
+              {t("home.seeAll")}
+              <ArrowRight size={14} />
+            </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {activeAuctions.map((auction) => (
-              <AuctionCard key={auction.id} auction={auction} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {latestAuctions.map((auction, index) => (
+              <div key={auction.id} className={index === 2 ? "hidden sm:block" : ""}>
+                <AuctionCard auction={auction} layout="vertical" />
+              </div>
             ))}
           </div>
 
-          <div className="text-center mt-12">
-            <Link href="/catalogue" className="btn btn-primary btn-lg">
-              Voir tout
-              <ArrowRight size={18} />
+          <div className="text-center mt-10">
+            <Link href="/catalogue" className="btn btn-primary">
+              {t("home.exploreCatalogue")}
+              <ArrowRight size={16} />
             </Link>
           </div>
         </div>
       </section>
 
-      <section className="py-20" style={{ background: "var(--surface-sunken)" }}>
+      {/* Comment ça marche */}
+      <section className="py-20" style={{ background: "#ffffff" }}>
         <div className="container-app">
           <div className="text-center mb-12">
-            <h2 className="text-[var(--ink)] mb-3">Comment ça marche</h2>
-            <p className="text-[var(--ink-secondary)] text-lg">
-              4 étapes simples pour acheter ou vendre
+            <div className="mb-4">
+              <span className="eyebrow-pill">{t("how.eyebrow")}</span>
+            </div>
+            <h2 className="marketing" style={{ fontSize: "28px", fontWeight: 700, letterSpacing: "-0.015em", color: "var(--ink)" }}>
+              {t("how.title")}
+            </h2>
+            <p className="mt-2 text-[15px]" style={{ color: "var(--ink-muted)" }}>
+              {t("how.subtitle")}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {steps.map((item, index) => {
               const Icon = item.icon;
               return (
-                <div key={index} className="glass-surface p-6 text-center">
+                <div key={index} className="card p-6 text-center transition-colors">
                   <div
-                    className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-                    style={{ background: "var(--accent-muted)" }}
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                    style={{ background: "var(--accent-subtle)" }}
                   >
-                    <Icon size={28} className="text-[var(--accent)]" />
+                    <Icon size={26} style={{ color: "var(--accent)" }} />
                   </div>
-                  <div
-                    className="text-xs font-semibold mb-2"
-                    style={{ color: "var(--ink-muted)" }}
-                  >
-                    Étape {index + 1}
+                  <div className="text-[11px] font-bold mb-2 uppercase tracking-widest" style={{ color: "var(--accent-gold)" }}>
+                    {t("how.step")} {index + 1}
                   </div>
-                  <h3 className="text-lg font-semibold text-[var(--ink)] mb-2">
+                  <h3 className="text-[15px] font-bold mb-2" style={{ color: "var(--ink)" }}>
                     {item.title}
                   </h3>
-                  <p className="text-sm text-[var(--ink-secondary)]">{item.description}</p>
+                  <p className="text-[13px] leading-relaxed" style={{ color: "var(--ink-muted)" }}>
+                    {item.description}
+                  </p>
                 </div>
               );
             })}
@@ -95,22 +99,22 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="py-20" style={{ background: "var(--accent)" }}>
+      {/* CTA */}
+      <section className="py-20" style={{ background: "var(--teal-deep)" }}>
         <div className="container-app text-center">
-          <h2 className="text-white mb-4">Prêt à commencer ?</h2>
-          <p className="text-xl text-white/80 mb-8">
-            Rejoignez des milliers d'acheteurs dans la sous-région
+          <h2 className="mb-4 font-bold" style={{ fontSize: "32px", color: "#ffffff", letterSpacing: "-0.015em" }}>
+            {t("cta.title1")}<br />
+            {t("cta.title2")}
+          </h2>
+          <p className="text-[15px] mb-8" style={{ color: "rgba(255,255,255,0.65)", maxWidth: "500px", margin: "0 auto 32px" }}>
+            {t("cta.subtitle")}
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-3">
             <Link href="/register" className="btn btn-gold btn-lg">
-              Créer un compte
+              {t("cta.createAccount")}
             </Link>
-            <Link
-              href="/catalogue"
-              className="btn btn-ghost btn-lg"
-              style={{ borderColor: "rgba(255,255,255,0.3)", color: "#fff" }}
-            >
-              Parcourir les ventes
+            <Link href="/register" className="btn btn-ghost-white btn-lg">
+              {t("cta.becomeSeller")}
             </Link>
           </div>
         </div>

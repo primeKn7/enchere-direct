@@ -135,7 +135,12 @@ export async function POST(
     })
 
     return NextResponse.json({ data: media }, { status: 201 })
-  } catch {
-    return NextResponse.json({ error: 'Erreur interne.' }, { status: 500 })
+  } catch (err) {
+    console.error('[UPLOAD_MEDIA] Échec upload média pour bien', id, ':', err)
+    const detail = err instanceof Error ? err.message : 'Erreur inconnue.'
+    return NextResponse.json(
+      { error: `Échec de l'enregistrement du média : ${detail}` },
+      { status: 500 }
+    )
   }
 }

@@ -75,7 +75,7 @@ export default async function SaisiesPage() {
           )}
         </div>
       ) : (
-        <div className="table-wrapper overflow-hidden">
+        <div className="table-wrapper">
           <table className="table">
             <thead>
               <tr>

@@ -8,6 +8,7 @@ import {
   requirePermission,
 } from '@/lib/api-helpers'
 import { Role } from '@prisma/client'
+import { syncEncheresStatuts } from '@/lib/enchere-statut'
 
 export async function GET(
   request: NextRequest,
@@ -38,6 +39,8 @@ export async function GET(
   }
 
   try {
+    await syncEncheresStatuts()
+
     const enchere = await prisma.enchere.findUnique({
       where: { id },
       include: {

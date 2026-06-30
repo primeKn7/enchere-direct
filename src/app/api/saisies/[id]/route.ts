@@ -8,6 +8,7 @@ import {
   requirePermission,
 } from '@/lib/api-helpers'
 import { updateDossierSchema } from '@/lib/validators'
+import { transitionsAutorisees } from '@/lib/dossier-statuts'
 import { Role } from '@prisma/client'
 
 async function canAccessDossier(userId: string, role: Role, dossierId: string): Promise<boolean> {
@@ -137,6 +138,27 @@ export async function PATCH(
       where: { id },
       select: { statut: true },
     })
+    if (!ancien) {
+      return NextResponse.json({ error: 'Dossier introuvable.' }, { status: 404 })
+    }
+
+    // Transition de statut non autorisée pour ce rôle depuis le statut courant.
+    if (
+      parsed.data.statut !== ancien.statut &&
+      !transitionsAutorisees(user.role, ancien.statut).includes(parsed.data.statut)
+    ) {
+      await logAudit({
+        utilisateurId: user.id,
+        action: 'TRANSITION_REFUSEE',
+        entite: 'DossierSaisie',
+        entiteId: id,
+        ancienneValeur: { statut: ancien.statut },
+        nouvelleValeur: { statut: parsed.data.statut },
+        adresseIP: ip,
+        userAgent: request.headers.get('user-agent') ?? undefined,
+      })
+      return NextResponse.json({ error: 'Transition de statut non autorisée.' }, { status: 403 })
+    }
 
     const updated = await prisma.dossierSaisie.update({
       where: { id },

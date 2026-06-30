@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { Role } from '@prisma/client'
+import { Role, Prisma } from '@prisma/client'
 import {
   getSessionOrUnauthorized,
   getClientIP,
@@ -8,6 +8,9 @@ import {
   checkApiRateLimit,
   internalServerError,
 } from '@/lib/api-helpers'
+import { adminCreateUserSchema } from '@/lib/validators'
+import { hashPassword } from '@/lib/security'
+import { hasPermission } from '@/types'
 
 export async function GET(req: NextRequest) {
   try {
@@ -65,7 +68,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function PATCH(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
     const rateRes = await checkApiRateLimit(req)
     if (rateRes) return rateRes
@@ -80,10 +83,89 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json()
+    const parsed = adminCreateUserSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 })
+    }
+
+    const data = parsed.data
+    const email = data.email.toLowerCase()
+
+    const existing = await prisma.utilisateur.findUnique({ where: { email } })
+    if (existing) {
+      return NextResponse.json({ error: 'Cette adresse email est déjà utilisée.' }, { status: 400 })
+    }
+
+    const motDePasseHash = await hashPassword(data.password)
+
+    const user = await prisma.utilisateur.create({
+      data: {
+        email,
+        motDePasseHash,
+        nom: data.nom,
+        prenom: data.prenom,
+        telephone: data.telephone,
+        role: data.role,
+        numeroCNI: data.numeroCNI,
+        numeroRCCM: data.numeroRCCM,
+        raisonSociale: data.raisonSociale,
+        numeroAgrement: data.numeroAgrement,
+        jurisdiction: data.jurisdiction,
+        posteAffectation: data.posteAffectation,
+        compteVerifie: data.compteVerifie ?? true,
+        mfaActif: false,
+      },
+      select: { id: true, email: true, role: true },
+    })
+
+    await logAudit({
+      utilisateurId: session.user.id,
+      action: 'CREATION_UTILISATEUR',
+      entite: 'Utilisateur',
+      entiteId: user.id,
+      nouvelleValeur: { email: user.email, role: user.role },
+      adresseIP: getClientIP(req),
+      userAgent: req.headers.get('user-agent') ?? undefined,
+    })
+
+    return NextResponse.json(user, { status: 201 })
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+      return NextResponse.json({ error: 'Cette adresse email est déjà utilisée.' }, { status: 400 })
+    }
+    console.error('Erreur utilisateurs POST:', err)
+    return internalServerError()
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const rateRes = await checkApiRateLimit(req)
+    if (rateRes) return rateRes
+
+    const session = await getSessionOrUnauthorized()
+    if (!session) {
+      return NextResponse.json({ error: 'Non autorisé.' }, { status: 401 })
+    }
+
+    const role = session.user.role as Role
+    const isAdmin = role === Role.ADMINISTRATEUR
+    const canValidate = hasPermission(role, 'COMPTE_VALIDER')
+
+    // L'admin gère tout ; un détenteur de COMPTE_VALIDER (validateur KYC) ne peut que vérifier.
+    if (!isAdmin && !canValidate) {
+      return NextResponse.json({ error: 'Non autorisé.' }, { status: 403 })
+    }
+
+    const body = await req.json()
     const { id, action } = body
 
     if (!id || !action) {
       return NextResponse.json({ error: 'ID et action requis.' }, { status: 400 })
+    }
+
+    if (!isAdmin && action !== 'verifier') {
+      return NextResponse.json({ error: 'Action réservée à un administrateur.' }, { status: 403 })
     }
 
     const user = await prisma.utilisateur.findUnique({ where: { id } })

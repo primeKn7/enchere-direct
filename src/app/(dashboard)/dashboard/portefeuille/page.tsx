@@ -93,14 +93,21 @@ export default function PortefeuillePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ montant: m, canal }),
       });
+      const json = await res.json().catch(() => ({}));
       if (res.ok) {
-        setMessage({ type: "success", text: "Rechargement effectué." });
+        // Le solde n'est crédité qu'après confirmation du prestataire de paiement.
+        setMessage({
+          type: "success",
+          text:
+            typeof json.message === "string"
+              ? json.message
+              : "Paiement initié. Le solde sera crédité après confirmation.",
+        });
         setMontant("");
         setShowRecharge(false);
         fetchPortefeuille();
       } else {
-        const err = await res.json();
-        setMessage({ type: "error", text: err.error ?? "Erreur." });
+        setMessage({ type: "error", text: json.error ?? "Erreur." });
       }
     } finally {
       setSubmitting(false);
@@ -152,7 +159,7 @@ export default function PortefeuillePage() {
             <div className="glass-surface p-6 flex items-center justify-center">
               <button
                 onClick={() => setShowRecharge(!showRecharge)}
-                className="btn-primary w-full"
+                className="btn btn-gold btn-lg w-full justify-center"
               >
                 <CreditCard size={18} />
                 Recharger
@@ -190,7 +197,7 @@ export default function PortefeuillePage() {
                   </select>
                 </div>
                 <div className="flex items-end">
-                  <button type="submit" disabled={submitting} className="btn-primary w-full">
+                  <button type="submit" disabled={submitting} className="btn btn-gold w-full justify-center">
                     {submitting ? "Traitement..." : "Confirmer"}
                   </button>
                 </div>
@@ -230,7 +237,38 @@ export default function PortefeuillePage() {
                 action={{ label: "Recharger", href: "#" }}
               />
             ) : (
-              <div className="table-wrapper overflow-hidden">
+              <>
+              {/* Cartes — mobile */}
+              <div className="md:hidden space-y-3">
+                {portefeuille.transactions.map((t) => {
+                  const Icon = typeIcons[t.type] ?? ArrowDownCircle;
+                  const canalInfo = canalLabels[t.canal];
+                  return (
+                    <div key={t.id} className="glass-surface p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="flex items-center gap-2 text-[13px] font-semibold" style={{ color: "var(--ink)" }}>
+                          <Icon size={16} className={t.type === "CREDIT" ? "text-[var(--success)]" : t.type === "DEBIT" ? "text-[var(--danger)]" : "text-[var(--ink-muted)]"} />
+                          {t.type}
+                        </span>
+                        <span className={`text-[15px] font-bold ${t.type === "CREDIT" ? "text-[var(--success)]" : t.type === "DEBIT" ? "text-[var(--danger)]" : "text-[var(--ink)]"}`} style={{ fontVariantNumeric: "tabular-nums" }}>
+                          {t.type === "CREDIT" ? "+" : t.type === "DEBIT" ? "-" : ""}{Number(t.montant).toLocaleString("fr-FR")} FCFA
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-[12px] mb-2" style={{ color: "var(--ink-muted)" }}>
+                        <span>{canalInfo?.label ?? t.canal}</span>
+                        <span>{new Date(t.createdAt).toLocaleDateString("fr-FR")}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className={`badge ${t.statut === "CONFIRME" ? "badge-success" : t.statut === "EN_ATTENTE" ? "badge-warning" : "badge-subtle"}`}>{t.statut}</span>
+                        <span className="text-[11px]" style={{ color: "var(--ink-muted)" }}>{t.reference}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Tableau — desktop */}
+              <div className="hidden md:block table-wrapper overflow-x-auto">
                 <table className="table">
                   <thead>
                     <tr>
@@ -267,6 +305,7 @@ export default function PortefeuillePage() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </div>
         </>

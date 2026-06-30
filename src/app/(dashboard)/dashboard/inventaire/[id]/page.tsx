@@ -9,9 +9,6 @@ import {
   Tag,
   DollarSign,
   Camera,
-  Video,
-  RotateCcw,
-  Home,
   Barcode,
   Wifi,
   ArrowLeft,
@@ -20,20 +17,8 @@ import {
 import Link from "next/link";
 import { hasPermission } from "@/types";
 import MediaUpload from "./MediaUpload";
-
-const MEDIA_ICONS: Record<string, React.ReactNode> = {
-  PHOTO: <Camera size={14} />,
-  VIDEO: <Video size={14} />,
-  VUE_360: <RotateCcw size={14} />,
-  VISITE_VIRTUELLE: <Home size={14} />,
-};
-
-const MEDIA_LABELS: Record<string, string> = {
-  PHOTO: "Photo HD",
-  VIDEO: "Vidéo HD",
-  VUE_360: "Vue 360°",
-  VISITE_VIRTUELLE: "Visite virtuelle",
-};
+import MediaGallery from "./MediaGallery";
+import MiseEnLot from "./MiseEnLot";
 
 export default async function BienDetailPage({
   params,
@@ -50,14 +35,22 @@ export default async function BienDetailPage({
   const bien = await prisma.bienSaisi.findUnique({
     where: { id },
     include: {
-      dossier: { select: { id: true, referenceJudiciaire: true } },
+      dossier: { select: { id: true, referenceJudiciaire: true, statut: true } },
       medias: { orderBy: { createdAt: "desc" } },
       expertises: { orderBy: { createdAt: "desc" } },
       estimationIA: true,
+      lot: true,
     },
   });
 
   if (!bien) notFound();
+
+  // Mise en lot : commissaire-priseur, agent AES ou administrateur.
+  const canLotter =
+    role === Role.COMMISSAIRE_PRISEUR ||
+    role === Role.AGENT_AES ||
+    role === Role.ADMINISTRATEUR;
+  const canPublier = role === Role.COMMISSAIRE_PRISEUR || role === Role.ADMINISTRATEUR;
 
   const photos = bien.medias.filter((m) => m.type === "PHOTO");
   const videos = bien.medias.filter((m) => m.type === "VIDEO");
@@ -154,6 +147,27 @@ export default async function BienDetailPage({
         </div>
       </div>
 
+      {/* Mise en lot (commissaire-priseur) */}
+      {canLotter && (
+        <MiseEnLot
+          bienId={bien.id}
+          canPublier={canPublier}
+          dossierValide={bien.dossier.statut === "VALIDE"}
+          valeurEstimee={Number(bien.valeurEstimee)}
+          lot={
+            bien.lot
+              ? {
+                  id: bien.lot.id,
+                  numeroLot: bien.lot.numeroLot,
+                  prixDepart: Number(bien.lot.prixDepart),
+                  typeEnchere: bien.lot.typeEnchere,
+                  publie: bien.lot.publie,
+                }
+              : null
+          }
+        />
+      )}
+
       {/* Identification physique */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-4">
@@ -241,22 +255,22 @@ export default async function BienDetailPage({
 
         {/* Photos */}
         {photos.length > 0 && (
-          <MediaSection title="Photos HD" icon="PHOTO" items={photos} />
+          <MediaGallery title="Photos HD" icon="PHOTO" items={photos} />
         )}
 
         {/* Videos */}
         {videos.length > 0 && (
-          <MediaSection title="Vidéos HD" icon="VIDEO" items={videos} />
+          <MediaGallery title="Vidéos HD" icon="VIDEO" items={videos} />
         )}
 
         {/* 360 */}
         {vues360.length > 0 && (
-          <MediaSection title="Vues 360°" icon="VUE_360" items={vues360} />
+          <MediaGallery title="Vues 360°" icon="VUE_360" items={vues360} />
         )}
 
         {/* Visites virtuelles */}
         {visites.length > 0 && (
-          <MediaSection
+          <MediaGallery
             title="Visites virtuelles"
             icon="VISITE_VIRTUELLE"
             items={visites}
@@ -298,82 +312,6 @@ function InfoRow({
         {icon}
         {value}
       </p>
-    </div>
-  );
-}
-
-function MediaSection({
-  title,
-  icon,
-  items,
-}: {
-  title: string;
-  icon: string;
-  items: { id: string; type: string; url: string; createdAt: Date }[];
-}) {
-  const isImage = icon === "PHOTO" || icon === "VUE_360";
-
-  return (
-    <div className="mb-6">
-      <div className="flex items-center gap-2 mb-3">
-        {MEDIA_ICONS[icon]}
-        <h4 className="text-sm font-medium text-[var(--ink)]">
-          {title} ({items.length})
-        </h4>
-      </div>
-      <div
-        className={
-          isImage
-            ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
-            : "grid grid-cols-1 md:grid-cols-2 gap-4"
-        }
-      >
-        {items.map((m) =>
-          isImage ? (
-            <a
-              key={m.id}
-              href={m.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="glass-surface overflow-hidden group"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={m.url}
-                alt={MEDIA_LABELS[m.type]}
-                className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-200"
-              />
-              <div className="p-2 flex items-center justify-between">
-                <span className="badge badge-subtle text-xs">
-                  {MEDIA_LABELS[m.type]}
-                </span>
-                <span className="text-xs text-[var(--ink-muted)]">
-                  {new Date(m.createdAt).toLocaleDateString("fr-FR")}
-                </span>
-              </div>
-            </a>
-          ) : (
-            <div key={m.id} className="glass-surface overflow-hidden">
-              <video
-                controls
-                preload="metadata"
-                className="w-full"
-                style={{ maxHeight: "300px" }}
-              >
-                <source src={m.url} />
-              </video>
-              <div className="p-2 flex items-center justify-between">
-                <span className="badge badge-subtle text-xs">
-                  {MEDIA_LABELS[m.type]}
-                </span>
-                <span className="text-xs text-[var(--ink-muted)]">
-                  {new Date(m.createdAt).toLocaleDateString("fr-FR")}
-                </span>
-              </div>
-            </div>
-          )
-        )}
-      </div>
     </div>
   );
 }

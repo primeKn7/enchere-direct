@@ -85,24 +85,25 @@ async function CitoyenDashboard({ userId }: { userId: string }) {
     prisma.portefeuille.findUnique({ where: { utilisateurId: userId }, select: { soldeDisponible: true } }),
   ]);
 
-  const encheres = await prisma.enchere.findMany({
-    where: {
-      statut: { in: [StatutEnchere.EN_COURS, StatutEnchere.PROLONGEE] },
-      lot: { publie: true },
-    },
-    include: {
-      lot: { include: { bien: { select: { description: true, localisation: true, categorie: true } } } },
-    },
-    take: 5,
-    orderBy: { dateFin: "asc" },
-  });
-
-  const offres = await prisma.offre.findMany({
-    where: { utilisateurId: userId, statut: { in: [StatutOffre.EN_ATTENTE, StatutOffre.ACCEPTEE] } },
-    include: { enchere: { select: { id: true, montantActuel: true, dateFin: true } } },
-    take: 5,
-    orderBy: { createdAt: "desc" },
-  });
+  const [encheres, offres] = await Promise.all([
+    prisma.enchere.findMany({
+      where: {
+        statut: { in: [StatutEnchere.EN_COURS, StatutEnchere.PROLONGEE] },
+        lot: { publie: true },
+      },
+      include: {
+        lot: { include: { bien: { select: { description: true, localisation: true, categorie: true } } } },
+      },
+      take: 5,
+      orderBy: { dateFin: "asc" },
+    }),
+    prisma.offre.findMany({
+      where: { utilisateurId: userId, statut: { in: [StatutOffre.EN_ATTENTE, StatutOffre.ACCEPTEE] } },
+      include: { enchere: { select: { id: true, montantActuel: true, dateFin: true } } },
+      take: 5,
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   const solde = portefeuille ? Number(portefeuille.soldeDisponible).toLocaleString("fr-FR") : "0";
 

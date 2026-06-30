@@ -1,19 +1,28 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Poppins, Playfair_Display } from "next/font/google";
 import AuthProvider from "@/components/providers/AuthProvider";
 import ThemeProvider from "@/components/providers/ThemeProvider";
+import LanguageProvider from "@/components/providers/LanguageProvider";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+const poppins = Poppins({
+  variable: "--font-poppins",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "EnchèreDirect.com - Plateforme nationale des saisies et enchères",
+  title: "EnchèreDirect — Maison d'enchères officielle CEDEAO",
   description:
-    "Système critique d'État pour la gestion des saisies judiciaires et des enchères électroniques au Bénin.",
+    "Plateforme officielle de saisie-vente dans l'espace communautaire CEDEAO. Achetez et vendez en toute transparence.",
 };
 
 export default function RootLayout({
@@ -22,10 +31,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
-      <body className="min-h-full flex flex-col">
+    <html lang="fr" className={`${poppins.variable} ${playfair.variable} h-full`} suppressHydrationWarning>
+      <body className="min-h-full flex flex-col antialiased">
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <LanguageProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

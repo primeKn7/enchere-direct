@@ -31,6 +31,19 @@ export async function POST(request: NextRequest) {
     }
 
     const data = parsed.data
+
+    // Sécurité : l'inscription publique ne peut créer que des comptes "grand public".
+    // Tous les rôles internes (agent, magistrat, expert, admin…) passent obligatoirement
+    // par la création d'utilisateur réservée à l'administrateur.
+    const ROLES_PUBLICS: Role[] = [Role.CITOYEN, Role.ENTREPRISE]
+    if (!ROLES_PUBLICS.includes(data.role as Role)) {
+      console.warn('[REGISTER] Tentative de création de rôle non public:', data.role)
+      return NextResponse.json(
+        { error: "Ce rôle ne peut pas être créé via l'inscription. Contactez un administrateur." },
+        { status: 403 }
+      )
+    }
+
     console.log('[REGISTER] Données validées pour:', data.email.toLowerCase())
 
     const existing = await prisma.utilisateur.findUnique({

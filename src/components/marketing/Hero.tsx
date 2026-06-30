@@ -1,32 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { MapPin, Car, Home, Gem, Palette, Smartphone, Sofa, Cog, Package, Search } from "lucide-react";
+import { MapPin, Tag, Search } from "lucide-react";
+import TrustStats from "@/components/ui/TrustStats";
+import { useT } from "@/components/providers/LanguageProvider";
 
-const COUNTRIES = [
-  { key: "benin", name: "Bénin" },
-  { key: "togo", name: "Togo" },
-  { key: "ghana", name: "Ghana" },
-  { key: "nigeria", name: "Nigeria" },
-  { key: "cote_ivoire", name: "Côte d'Ivoire" },
-  { key: "senegal", name: "Sénégal" },
-  { key: "burkina_faso", name: "Burkina Faso" },
-];
-
-const CATEGORIES = [
-  { key: "vehicules", name: "Véhicules", icon: Car },
-  { key: "immobilier", name: "Immobilier", icon: Home },
-  { key: "bijoux", name: "Bijoux / Or", icon: Gem },
-  { key: "art", name: "Art / Antiquités", icon: Palette },
-  { key: "electronique", name: "Électronique", icon: Smartphone },
-  { key: "meubles", name: "Meubles", icon: Sofa },
-  { key: "machines", name: "Machines", icon: Cog },
-  { key: "autres", name: "Autres", icon: Package },
-];
+const COUNTRY_KEYS = ["benin", "togo", "ghana", "nigeria", "cote_ivoire", "senegal", "burkina_faso"];
+const CATEGORY_KEYS = ["vehicules", "immobilier", "bijoux", "art", "electronique", "meubles", "machines", "autres"];
 
 export function Hero() {
+  const t = useT();
   const [country, setCountry] = useState("");
   const [category, setCategory] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
@@ -36,111 +20,155 @@ export function Hero() {
     if (country) params.set("country", country);
     if (category) params.set("category", category);
     if (maxPrice) params.set("maxPrice", maxPrice);
-    return `/catalogue?${params.toString()}`;
+    const q = params.toString();
+    return `/catalogue${q ? `?${q}` : ""}`;
   };
 
   return (
     <section
-      className="relative min-h-[90vh] flex items-center overflow-hidden"
-      style={{ background: "var(--accent-subtle)" }}
+      className="relative overflow-hidden"
+      style={{
+        background:
+          "radial-gradient(120% 130% at 0% 0%, rgba(10,42,56,0.95) 0%, rgba(10,42,56,0) 52%), linear-gradient(to left, #1A5A7A 0%, #0F3C4D 55%, #0A2A38 100%)",
+        minHeight: "88vh",
+      }}
     >
-      <div className="container-app py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <h1 className="text-[var(--ink)] mb-6">
-              Saisie-vente CEDEAO
-            </h1>
-            <h2 className="text-xl md:text-2xl text-[var(--ink-secondary)] mb-8">
-              Plateforme officielle de vente sur saisie dans l&apos;espace communautaire
-            </h2>
+      {/* Background texture */}
+      <div
+        className="absolute inset-0 opacity-[0.04]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)",
+          backgroundSize: "60px 60px",
+        }}
+      />
 
+      <div
+        className="container-app relative py-20 lg:py-28"
+        style={{ paddingInline: "clamp(1.5rem, 4vw, 2.25rem)" }}
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          {/* Left: text + search */}
+          <div className="marketing">
+            <div className="eyebrow-pill mb-6">
+              <span className="dot" />
+              {t("hero.badge")}
+            </div>
+
+            <h1 className="mb-4">
+              {t("hero.title1")}<br />
+              {t("hero.title2")} <span style={{ color: "var(--accent-gold)" }}>{t("hero.titleGold")}</span>
+            </h1>
+
+            <p className="text-[16px] mb-8" style={{ color: "rgba(255,255,255,0.70)", maxWidth: "460px" }}>
+              {t("hero.subtitle")}
+            </p>
+
+            {/* Search bar — carte blanche */}
             <div
-              className="p-6 max-w-xl"
+              className="p-5 w-full mt-6 sm:mt-0"
               style={{
-                background: "var(--surface-primary)",
-                borderRadius: "var(--radius-lg)",
-                boxShadow: "var(--shadow-md)",
+                background: "#ffffff",
+                borderRadius: "var(--radius-xl)",
+                boxShadow: "var(--shadow-lg)",
               }}
             >
-              <h3 className="text-lg font-semibold text-[var(--ink)] mb-4">
-                Recherche rapide
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <p
+                className="text-[12px] font-semibold mb-4"
+                style={{ color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}
+              >
+                {t("hero.quickSearch")}
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                {/* Pays */}
                 <div>
-                  <label className="block text-sm font-medium text-[var(--ink)] mb-1.5">
-                    Pays
+                  <label className="block text-[11px] font-semibold mb-1.5" style={{ color: "var(--ink-muted)" }}>
+                    {t("hero.fieldCountry")}
                   </label>
                   <div className="relative">
-                    <MapPin
-                      size={16}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]"
-                    />
-                    <select
-                      value={country}
-                      onChange={(e) => setCountry(e.target.value)}
-                      className="input pl-9"
-                    >
-                      <option value="">Tous les pays</option>
-                      {COUNTRIES.map((c) => (
-                        <option key={c.key} value={c.key}>
-                          {c.name}
-                        </option>
+                    <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 z-10" style={{ color: "var(--ink-muted)" }} />
+                    <select value={country} onChange={(e) => setCountry(e.target.value)} className="input pl-9 w-full">
+                      <option value="">{t("filter.allCountries")}</option>
+                      {COUNTRY_KEYS.map((k) => (
+                        <option key={k} value={k}>{t(`country.${k}`)}</option>
                       ))}
                     </select>
                   </div>
                 </div>
 
+                {/* Catégorie */}
                 <div>
-                  <label className="block text-sm font-medium text-[var(--ink)] mb-1.5">
-                    Catégorie
+                  <label className="block text-[11px] font-semibold mb-1.5" style={{ color: "var(--ink-muted)" }}>
+                    {t("hero.fieldCategory")}
                   </label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="input"
-                  >
-                    <option value="">Toutes</option>
-                    {CATEGORIES.map((c) => (
-                      <option key={c.key} value={c.key}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 z-10" style={{ color: "var(--ink-muted)" }} />
+                    <select value={category} onChange={(e) => setCategory(e.target.value)} className="input pl-9 w-full">
+                      <option value="">{t("filter.allCategories")}</option>
+                      {CATEGORY_KEYS.map((k) => (
+                        <option key={k} value={k}>{t(`category.${k}`)}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-[var(--ink)] mb-1.5">
-                    Prix max
+                {/* Prix max */}
+                <div className="col-span-2 order-first sm:col-span-1 sm:order-none">
+                  <label className="block text-[11px] font-semibold mb-1.5" style={{ color: "var(--ink-muted)" }}>
+                    {t("hero.fieldPrice")}
                   </label>
                   <input
                     type="number"
                     value={maxPrice}
                     onChange={(e) => setMaxPrice(e.target.value)}
-                    placeholder="Ex: 10000000"
-                    className="input"
+                    placeholder="10 000 000"
+                    className="input w-full"
                   />
                 </div>
               </div>
 
-              <Link
-                href={buildSearchUrl()}
-                className="btn btn-primary mt-5"
-              >
-                <Search size={18} />
-                Rechercher
-              </Link>
+              {/* Bouton en bas — aligné à droite (extrémité de Catégorie) sur mobile, pleine largeur sur desktop */}
+              <div className="flex justify-end sm:block">
+                <Link href={buildSearchUrl()} className="btn btn-gold btn-lg w-[60%] sm:w-full justify-center">
+                  <Search size={16} />
+                  {t("hero.searchLot")}
+                </Link>
+              </div>
             </div>
+
+            {/* Trust stats */}
+            <TrustStats />
           </div>
 
+          {/* Right: illustration (desktop only) */}
           <div className="hidden lg:flex justify-center items-center">
-            <div className="relative w-full max-w-lg h-[480px]">
-              <Image
-                src="/images/hero-illustration.png"
-                alt="Vente aux enchères en ligne"
-                fill
-                className="object-contain"
-                priority
-              />
+            <div
+              className="relative rounded-2xl overflow-hidden flex items-center justify-center"
+              style={{
+                width: "100%",
+                maxWidth: "440px",
+                height: "420px",
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.12)",
+              }}
+            >
+              <div className="text-center">
+                <div
+                  className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-4"
+                  style={{ background: "rgba(253,193,52,0.15)" }}
+                >
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14.5 17.5L3 6V3h3l11.5 11.5" />
+                    <path d="M13 19l6-6" />
+                    <path d="M3 21h18" />
+                    <path d="M9.5 9.5L12 7" />
+                    <path d="M12 7l3-3" />
+                  </svg>
+                </div>
+                <p className="text-[14px] font-semibold" style={{ color: "rgba(255,255,255,0.80)" }}>
+                  {t("home.latestSales")}
+                </p>
+              </div>
             </div>
           </div>
         </div>

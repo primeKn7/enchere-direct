@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useT } from "@/components/providers/LanguageProvider";
 import {
   Calendar,
   Clock,
@@ -39,6 +40,12 @@ export interface DemoAuction {
   sellerName: string;
   condition: string;
   location: string;
+  lat?: number;
+  lng?: number;
+  /** Numéro de lot réel (ex. "LOT-000001"). Absent pour les données démo. */
+  lotNumber?: string;
+  /** true si aucune enchère n'est encore programmée pour ce lot. */
+  nonProgramme?: boolean;
 }
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -52,26 +59,20 @@ const categoryIcons: Record<string, React.ElementType> = {
   autres: Package,
 };
 
-function getTimeLeft(endDate: string): { text: string; variant: "brand" | "warning" | "danger" } {
-  const end = new Date(endDate).getTime();
-  const now = Date.now();
-  const diff = end - now;
-
+function getTimeLeft(endDate: string): { text: string; variant: "ok" | "warning" | "danger" } {
+  const diff = new Date(endDate).getTime() - Date.now();
   if (diff <= 0) return { text: "TERMINÉ", variant: "danger" };
-
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-  if (days > 0) return { text: `${days}j ${hours}h`, variant: "brand" };
-  if (hours > 0) return { text: `${hours}h ${minutes}min`, variant: hours < 1 ? "warning" : "brand" };
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const minutes = Math.floor((diff % 3600000) / 60000);
+  if (days > 0) return { text: `${days}j ${hours}h`, variant: "ok" };
+  if (hours > 0) return { text: `${hours}h ${minutes}min`, variant: hours < 2 ? "warning" : "ok" };
   if (minutes <= 5) return { text: `${minutes}min`, variant: "danger" };
   return { text: `${minutes}min`, variant: "warning" };
 }
 
 function formatDate(dateStr: string) {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("fr-FR", {
+  return new Date(dateStr).toLocaleDateString("fr-FR", {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -81,148 +82,180 @@ function formatDate(dateStr: string) {
 interface AuctionCardProps {
   auction: DemoAuction;
   basePath?: string;
+  layout?: "horizontal" | "vertical";
 }
 
-export function AuctionCard({ auction, basePath = "/catalogue" }: AuctionCardProps) {
+export function AuctionCard({ auction, basePath = "/catalogue", layout = "horizontal" }: AuctionCardProps) {
+  const t = useT();
   const [currentImage, setCurrentImage] = useState(0);
-  const images =
-    auction.images.length > 0 ? auction.images : [null];
-  const hasMultipleImages = auction.images.length > 1;
-
-  const { text: timeLeft, variant: timerVariant } = getTimeLeft(auction.endDate);
-  const isEnded = timeLeft === "TERMINÉ";
+  const images = auction.images.length > 0 ? auction.images : [null];
+  const hasMultiple = auction.images.length > 1;
+  const { text: timeLeftRaw, variant } = getTimeLeft(auction.endDate);
+  const isEnded = new Date(auction.endDate).getTime() - Date.now() <= 0;
+  const timeLeft = isEnded ? t("card.statusEnded") : timeLeftRaw;
   const CategoryIcon = categoryIcons[auction.categoryKey] ?? Package;
 
+  const timerStyle: Record<string, { bg: string; color: string }> = {
+    ok: { bg: "var(--success-subtle)", color: "var(--success)" },
+    warning: { bg: "var(--warning-subtle)", color: "var(--warning)" },
+    danger: { bg: "var(--danger-subtle)", color: "var(--danger)" },
+  };
+
+  const lotNumber = auction.lotNumber ?? `${t("card.lot")} ${String(auction.id).padStart(3, "0")}`;
+  const typeLabel = auction.type === "judiciaire" ? t("card.judiciaire") : t("cat.volontaire");
+  const typeBadgeClass = auction.type === "judiciaire" ? "badge-type" : "badge-type-vol";
+
   const nextImage = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setCurrentImage((prev) => (prev + 1) % images.length);
+    e.preventDefault(); e.stopPropagation();
+    setCurrentImage((p) => (p + 1) % images.length);
   };
-
   const prevImage = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setCurrentImage((prev) => (prev - 1 + images.length) % images.length);
+    e.preventDefault(); e.stopPropagation();
+    setCurrentImage((p) => (p - 1 + images.length) % images.length);
   };
 
-  const goToImage = (e: React.MouseEvent, idx: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setCurrentImage(idx);
-  };
-
-  const timerClasses = {
-    brand: "bg-[var(--accent-subtle)] text-[var(--accent)]",
-    warning: "bg-[var(--warning-subtle)] text-[var(--warning)]",
-    danger: "bg-[var(--danger-subtle)] text-[var(--danger)] animate-pulse",
-  };
-
-  return (
-    <Link href={`${basePath}/${auction.id}`} className="block group">
-      <div className="glass-surface transition-all duration-250 ease-out hover:-translate-y-1 h-full flex flex-col">
-        <div className="relative h-48 overflow-hidden rounded-t-[var(--radius-lg)]">
-          {images[currentImage] ? (
-            <img
-              src={images[currentImage]}
-              alt={`${auction.title} - Image ${currentImage + 1}`}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div
-              className="w-full h-full flex items-center justify-center"
-              style={{ background: "var(--surface-sunken)" }}
-            >
-              <CategoryIcon size={48} className="text-[var(--ink-muted)]" />
-            </div>
-          )}
-
-          <div className="absolute top-3 left-3">
-            <span className="badge badge-brand">{auction.category}</span>
+  if (layout === "horizontal") {
+    return (
+      <Link href={`${basePath}/${auction.id}`} className="block group">
+        <div className="card-interactive flex overflow-hidden" style={{ minHeight: "160px" }}>
+          {/* Image */}
+          <div className="relative shrink-0 w-[180px] sm:w-[200px]" style={{ background: "var(--surface-sunken)" }}>
+            {images[currentImage] ? (
+              <img
+                src={images[currentImage]!}
+                alt={auction.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <CategoryIcon size={40} style={{ color: "var(--ink-disabled)" }} />
+              </div>
+            )}
+            {hasMultiple && (
+              <>
+                <button onClick={prevImage} className="absolute left-1 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Précédent">
+                  <ChevronLeft size={14} style={{ color: "var(--teal-deep)" }} />
+                </button>
+                <button onClick={nextImage} className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Suivant">
+                  <ChevronRight size={14} style={{ color: "var(--teal-deep)" }} />
+                </button>
+              </>
+            )}
           </div>
 
-          {auction.type === "judiciaire" && (
-            <div className="absolute top-3 right-3">
-              <span className="badge badge-judiciaire">Judiciaire</span>
+          {/* Content */}
+          <div className="flex-1 p-4 flex flex-col justify-between min-w-0">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="badge badge-lot">{lotNumber}</span>
+                <span className={`badge ${typeBadgeClass}`}>{typeLabel}</span>
+              </div>
+              <span className="badge badge-subtle mb-2 inline-block">{auction.category}</span>
+              <h3 className="text-[15px] font-semibold mb-1 line-clamp-2" style={{ color: "var(--ink)" }}>
+                {auction.title}
+              </h3>
+              <p className="flex items-center gap-1 text-[12px] mb-2" style={{ color: "var(--ink-muted)" }}>
+                <MapPin size={12} />
+                {auction.location}, {auction.country}
+              </p>
+              <div className="flex items-center gap-4 text-[12px] mb-3" style={{ color: "var(--ink-muted)" }}>
+                <span className="flex items-center gap-1"><Calendar size={12} />{formatDate(auction.scheduleDate)}</span>
+                <span className="flex items-center gap-1"><Clock size={12} />{auction.liveTime}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <p className="text-[10px] uppercase tracking-wide mb-0.5" style={{ color: "var(--ink-muted)", fontWeight: 600 }}>{t("card.currentBid")}</p>
+                <p className="text-price text-[16px]">
+                  {auction.currentPrice.toLocaleString("fr-FR")} <span className="text-[12px] font-medium" style={{ color: "var(--ink-muted)" }}>{auction.currency}</span>
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  className="badge"
+                  style={{ background: timerStyle[variant].bg, color: timerStyle[variant].color }}
+                >
+                  {timeLeft}
+                </span>
+                <span className="btn btn-gold btn-sm" style={{ pointerEvents: "none", opacity: isEnded ? 0.45 : 1 }}>
+                  <Gavel size={14} />
+                  {isEnded ? t("card.endedShort") : t("card.bid")}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
+  /* Vertical layout (catalogue grid / mobile) */
+  return (
+    <Link href={`${basePath}/${auction.id}`} className="block group">
+      <div className="card-interactive flex flex-col h-full overflow-hidden">
+        {/* Image */}
+        <div className="relative h-48" style={{ background: "var(--surface-sunken)" }}>
+          {images[currentImage] ? (
+            <img src={images[currentImage]!} alt={auction.title} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <CategoryIcon size={48} style={{ color: "var(--ink-disabled)" }} />
             </div>
           )}
-
-          {hasMultipleImages && (
+          <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2">
+            <span className="badge badge-lot">{lotNumber}</span>
+            <span className={`badge ${typeBadgeClass}`}>{typeLabel}</span>
+          </div>
+          {hasMultiple && (
             <>
-              <button
-                onClick={prevImage}
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
-                aria-label="Image précédente"
-              >
-                <ChevronLeft size={18} className="text-[var(--accent)]" />
+              <button onClick={prevImage} className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Précédent">
+                <ChevronLeft size={16} style={{ color: "var(--teal-deep)" }} />
               </button>
-              <button
-                onClick={nextImage}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
-                aria-label="Image suivante"
-              >
-                <ChevronRight size={18} className="text-[var(--accent)]" />
+              <button onClick={nextImage} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Suivant">
+                <ChevronRight size={16} style={{ color: "var(--teal-deep)" }} />
               </button>
-
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                {images.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={(e) => goToImage(e, idx)}
-                    className={`w-2 h-2 rounded-full transition-colors ${
-                      currentImage === idx ? "bg-[var(--accent)]" : "bg-white/60"
-                    }`}
-                    aria-label={`Voir image ${idx + 1}`}
-                  />
-                ))}
-              </div>
             </>
           )}
         </div>
 
-        <div className="p-5 flex-1 flex flex-col relative z-10">
-          <div className="flex items-center gap-2 mb-3 text-sm text-[var(--ink-muted)]">
-            <MapPin size={14} />
-            <span>{auction.country}</span>
-          </div>
-
-          <h3 className="text-lg font-semibold text-[var(--ink)] mb-3 line-clamp-2">
+        {/* Content */}
+        <div className="p-4 flex flex-col flex-1">
+          <span className="badge badge-subtle mb-2 self-start">{auction.category}</span>
+          <h3 className="text-[15px] font-semibold mb-2 line-clamp-2" style={{ color: "var(--ink)" }}>
             {auction.title}
           </h3>
+          <p className="flex items-center gap-1 text-[12px] mb-3" style={{ color: "var(--ink-muted)" }}>
+            <MapPin size={12} />
+            {auction.location}, {auction.country}
+          </p>
 
-          <div className="grid grid-cols-2 gap-3 mb-4 text-sm text-[var(--ink-muted)]">
-            <div className="flex items-center gap-1.5">
-              <Calendar size={14} />
-              <span>{formatDate(auction.scheduleDate)}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Clock size={14} />
-              <span>{auction.liveTime}</span>
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <p className="text-xs text-[var(--ink-muted)] mb-1">Prix de départ</p>
-            <p className="text-lg text-price-start">
-              {auction.startingPrice.toLocaleString("fr-FR")} {auction.currency}
+          <div className="mt-auto">
+            <p className="text-[10px] uppercase tracking-wide mb-0.5" style={{ color: "var(--ink-muted)", fontWeight: 600 }}>{t("card.currentBid")}</p>
+            <p className="text-price text-[17px] mb-3">
+              {auction.currentPrice.toLocaleString("fr-FR")} <span className="text-[12px] font-medium" style={{ color: "var(--ink-muted)" }}>{auction.currency}</span>
             </p>
-          </div>
-
-          <div className="flex items-center justify-between mb-5 mt-auto">
-            <div>
-              <p className="text-xs text-[var(--ink-muted)] mb-1">Mise actuelle</p>
-              <p className="text-xl text-price">
-                {auction.currentPrice.toLocaleString("fr-FR")} {auction.currency}
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[11px]" style={{ color: "var(--ink-muted)" }}>
+                {formatDate(auction.scheduleDate)} · {auction.liveTime}
               </p>
+              <span
+                className="badge"
+                style={{ background: timerStyle[variant].bg, color: timerStyle[variant].color }}
+              >
+                {timeLeft}
+              </span>
             </div>
-            <span className={`badge ${timerClasses[timerVariant]}`} aria-live="polite">
-              {isEnded ? "Expirée" : timeLeft}
-            </span>
+            <button
+              className="btn btn-gold w-full"
+              type="button"
+              disabled={isEnded}
+              style={{ pointerEvents: "none" }}
+            >
+              <Gavel size={16} />
+              {isEnded ? t("card.saleEnded") : t("card.participate")}
+            </button>
           </div>
-
-          <button className="btn btn-gold w-full" type="button" disabled={isEnded}>
-            <Gavel size={18} />
-            {isEnded ? "Vente terminée" : "Participer"}
-          </button>
         </div>
       </div>
     </Link>

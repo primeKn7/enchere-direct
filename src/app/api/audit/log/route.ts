@@ -16,6 +16,13 @@ const auditLogSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Endpoint réservé aux appels internes (middleware). Protégé par un secret
+    // partagé pour empêcher la falsification du journal d'audit depuis l'extérieur.
+    const secret = process.env.AUDIT_INTERNAL_SECRET
+    if (!secret || request.headers.get('x-audit-secret') !== secret) {
+      return NextResponse.json({ error: 'Non autorisé.' }, { status: 401 })
+    }
+
     const body = await request.json()
     const parsed = auditLogSchema.safeParse(body)
 

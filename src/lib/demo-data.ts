@@ -178,15 +178,40 @@ const rawAuctions = [
   },
 ];
 
+// Coordonnées géographiques approximatives par ville (pour la cartographie).
+const cityCoords: Record<string, [number, number]> = {
+  "Cotonou": [6.3703, 2.3912],
+  "Cocody, Abidjan": [5.3599, -3.9959],
+  "Lomé": [6.1725, 1.2314],
+  "Accra": [5.6037, -0.187],
+  "Lagos": [6.5244, 3.3792],
+  "Dakar": [14.7167, -17.4677],
+  "Ouagadougou": [12.3714, -1.5197],
+};
+
+// Centroïdes par pays (repli si la ville est inconnue).
+const countryCoords: Record<string, [number, number]> = {
+  benin: [9.3077, 2.3158],
+  togo: [8.6195, 0.8248],
+  ghana: [7.9465, -1.0232],
+  nigeria: [9.082, 8.6753],
+  cote_ivoire: [7.54, -5.5471],
+  senegal: [14.4974, -14.4524],
+  burkina_faso: [12.2383, -1.5616],
+};
+
 export const demoAuctions: DemoAuction[] = rawAuctions.map((a) => {
   const category = categoryMap[a.category] ?? categoryMap["autres"];
   const country = countryMap[a.country] ?? { name: a.country };
+  const coords = cityCoords[a.location] ?? countryCoords[a.country];
   return {
     ...a,
     category: category.name,
     categoryKey: a.category,
     country: country.name,
     countryKey: a.country,
+    lat: coords?.[0],
+    lng: coords?.[1],
   };
 });
 

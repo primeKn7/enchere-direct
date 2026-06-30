@@ -23,18 +23,23 @@ export default function EncheresPage() {
   const { data: session } = useSession();
   const [encheres, setEncheres] = useState<Enchere[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [scope, setScope] = useState<"all" | "mine">("all");
 
   const role = session?.user?.role;
   const canCreate = role === "COMMISSAIRE_PRISEUR" || role === "ADMINISTRATEUR";
+  // L'onglet « Mes enchères » (participation) ne concerne que les enchérisseurs.
+  const canFilterMine = role === "CITOYEN" || role === "ENTREPRISE";
 
   useEffect(() => {
-    fetch("/api/encheres")
+    setLoaded(false);
+    const url = scope === "mine" && canFilterMine ? "/api/encheres?mine=true" : "/api/encheres";
+    fetch(url)
       .then((r) => r.json())
       .then((json) => {
         setEncheres(json.data ?? []);
         setLoaded(true);
       });
-  }, []);
+  }, [scope, canFilterMine]);
 
   return (
     <div>
@@ -50,10 +55,37 @@ export default function EncheresPage() {
         )}
       </div>
 
+      {canFilterMine && (
+        <div className="seg w-full sm:w-auto mb-6" role="tablist" aria-label="Filtre des enchères">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={scope === "all"}
+            onClick={() => setScope("all")}
+            className={`seg-btn px-4 sm:px-7 ${scope === "all" ? "active" : ""}`}
+          >
+            Toutes
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={scope === "mine"}
+            onClick={() => setScope("mine")}
+            className={`seg-btn px-4 sm:px-7 ${scope === "mine" ? "active" : ""}`}
+          >
+            Mes enchères
+          </button>
+        </div>
+      )}
+
       {loaded && encheres.length === 0 ? (
         <EmptyState
-          title="Aucune enchère pour le moment"
-          description="Les enchères publiées par les commissaires-priseurs apparaîtront ici. Consultez le catalogue pour suivre les prochaines ventes."
+          title={scope === "mine" ? "Vous ne participez à aucune enchère" : "Aucune enchère pour le moment"}
+          description={
+            scope === "mine"
+              ? "Les enchères sur lesquelles vous avez déposé une offre apparaîtront ici."
+              : "Les enchères publiées par les commissaires-priseurs apparaîtront ici. Consultez le catalogue pour suivre les prochaines ventes."
+          }
           illustration="auction"
           action={{ label: "Voir le catalogue", href: "/dashboard/catalogue" }}
         />

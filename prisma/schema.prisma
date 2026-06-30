@@ -16,6 +16,7 @@ enum Role {
   MAGISTRAT
   DOUANIER
   TRESOR_PUBLIC
+  EXPERT
   ADMINISTRATEUR
 }
 
@@ -65,6 +66,20 @@ enum StatutGarantie {
   CONFISQUEE
 }
 
+enum StatutAffectation {
+  PROPOSEE
+  ACCEPTEE
+  REFUSEE
+  TERMINEE
+}
+
+enum StatutRapport {
+  BROUILLON
+  SOUMIS
+  VALIDE
+  REJETE
+}
+
 // ─── IAM ─────────────────────────────────────────────
 
 model Utilisateur {
@@ -99,9 +114,43 @@ model Utilisateur {
   portefeuille      Portefeuille?
   dossiersCrees     DossierSaisie[]
   encheresDirigees  Enchere[]        @relation("CommissairePriseur")
+  affectationsExpert AffectationExpertise[] @relation("ExpertAffectations")
+  affectationsAssignees AffectationExpertise[] @relation("Assigneur")
+  rapportsExpert    RapportExpertise[] @relation("ExpertRapports")
+  rapportsValides   RapportExpertise[] @relation("RapportValidations")
+  notationsRecues   NotationExpert[]   @relation("ExpertNotations")
+  demandeKYC        DemandeKYC?        @relation("DemandeurKYC")
+  kycTraitees       DemandeKYC[]       @relation("ValidateurKYC")
 
   @@index([email])
   @@index([role])
+}
+
+enum StatutKYC {
+  EN_ATTENTE
+  VALIDE
+  REJETE
+}
+
+model DemandeKYC {
+  id             String    @id @default(uuid())
+  utilisateurId  String    @unique
+  typeDocument   String    // CNI | PASSEPORT | PERMIS
+  numeroDocument String
+  rectoUrl       String
+  versoUrl       String?
+  selfieUrl      String
+  statut         StatutKYC @default(EN_ATTENTE)
+  motifRejet     String?   @db.Text
+  traiteParId    String?
+  dateTraitement DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  utilisateur Utilisateur  @relation("DemandeurKYC", fields: [utilisateurId], references: [id], onDelete: Cascade)
+  traitePar   Utilisateur? @relation("ValidateurKYC", fields: [traiteParId], references: [id])
+
+  @@index([statut])
 }
 
 model Session {
@@ -154,6 +203,8 @@ model DossierSaisie {
 
   @@index([referenceJudiciaire])
   @@index([statut])
+  @@index([jurisdictionCompetente])
+  @@index([agentAesId])
 }
 
 model DocumentGED {
@@ -191,6 +242,7 @@ model BienSaisi {
   dossier       DossierSaisie   @relation(fields: [dossierId], references: [id])
   medias        MediaHD[]
   expertises    RapportExpertise[]
+  affectations  AffectationExpertise[]
   estimationIA  EstimationIA?
   lot           Lot?
 
@@ -207,17 +259,66 @@ model MediaHD {
   bien       BienSaisi @relation(fields: [bienId], references: [id])
 }
 
-model RapportExpertise {
-  id               String    @id @default(uuid())
-  bienId           String
-  expertId         String
-  valeurEstimee    Decimal   @db.Decimal(15, 2)
-  statutValidation String    @default("EN_ATTENTE")
-  contenu          String    @db.Text
-  createdAt        DateTime  @default(now())
-  bien             BienSaisi @relation(fields: [bienId], references: [id])
+model AffectationExpertise {
+  id           String            @id @default(uuid())
+  bienId       String
+  expertId     String
+  assigneParId String
+  statut       StatutAffectation @default(PROPOSEE)
+  dateLimite   DateTime?
+  consigne     String?           @db.Text
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  bien        BienSaisi         @relation(fields: [bienId], references: [id])
+  expert      Utilisateur       @relation("ExpertAffectations", fields: [expertId], references: [id])
+  assignePar  Utilisateur       @relation("Assigneur", fields: [assigneParId], references: [id])
+  rapport     RapportExpertise?
 
   @@index([bienId])
+  @@index([expertId])
+  @@index([statut])
+}
+
+model RapportExpertise {
+  id               String        @id @default(uuid())
+  bienId           String
+  expertId         String
+  affectationId    String?       @unique
+  valeurEstimee    Decimal       @db.Decimal(15, 2)
+  methodologie     String?       @db.Text
+  contenu          String        @db.Text
+  statutValidation StatutRapport @default(SOUMIS)
+  motifRejet       String?       @db.Text
+  valideParId      String?
+  dateValidation   DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  bien        BienSaisi             @relation(fields: [bienId], references: [id])
+  expert      Utilisateur           @relation("ExpertRapports", fields: [expertId], references: [id])
+  valideePar  Utilisateur?          @relation("RapportValidations", fields: [valideParId], references: [id])
+  affectation AffectationExpertise? @relation(fields: [affectationId], references: [id])
+  notation    NotationExpert?
+
+  @@index([bienId])
+  @@index([expertId])
+  @@index([statutValidation])
+}
+
+model NotationExpert {
+  id          String   @id @default(uuid())
+  rapportId   String   @unique
+  expertId    String
+  noteParId   String
+  note        Int      // 1 à 5
+  commentaire String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  rapport RapportExpertise @relation(fields: [rapportId], references: [id])
+  expert  Utilisateur      @relation("ExpertNotations", fields: [expertId], references: [id])
+
+  @@index([expertId])
 }
 
 model EstimationIA {

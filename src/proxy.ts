@@ -41,7 +41,10 @@ async function logApiRequest(req: Request, userId?: string, action = 'API_REQUES
   try {
     await fetch(`${url.origin}/api/audit/log`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-audit-secret': process.env.AUDIT_INTERNAL_SECRET ?? '',
+      },
       body: JSON.stringify({
         utilisateurId: userId,
         action,

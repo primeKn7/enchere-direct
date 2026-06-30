@@ -15,7 +15,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { hasPermission } from "@/types";
+import { STATUT_DOSSIER_LABELS, STATUT_DOSSIER_BADGE } from "@/lib/dossier-statuts";
 import DocumentUpload from "./DocumentUpload";
+import StatutActions from "./StatutActions";
 
 export default async function SaisieDetailPage({
   params,
@@ -40,14 +42,6 @@ export default async function SaisieDetailPage({
   if (!dossier) notFound();
 
   const canUpload = hasPermission(role, "DOSSIER_CREER");
-
-  const statusBadge: Record<string, string> = {
-    EN_ATTENTE: "badge-warning",
-    CONFORME: "badge-subtle",
-    NON_CONFORME: "badge-danger",
-    VALIDE: "badge-success",
-    CLOTURE: "badge-subtle",
-  };
 
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} o`;
@@ -83,10 +77,12 @@ export default async function SaisieDetailPage({
         <h1 className="text-[var(--ink)]">
           Dossier {dossier.referenceJudiciaire}
         </h1>
-        <span className={`badge ${statusBadge[dossier.statut]}`}>
-          {dossier.statut}
+        <span className={`badge ${STATUT_DOSSIER_BADGE[dossier.statut]}`}>
+          {STATUT_DOSSIER_LABELS[dossier.statut]}
         </span>
       </div>
+
+      <StatutActions dossierId={dossier.id} role={role} current={dossier.statut} />
 
       {/* Info cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -174,7 +170,7 @@ export default async function SaisieDetailPage({
             <p className="text-[var(--ink-muted)]">Aucun document ajouté.</p>
           </div>
         ) : (
-          <div className="table-wrapper overflow-hidden">
+          <div className="table-wrapper">
             <table className="table">
               <thead>
                 <tr>

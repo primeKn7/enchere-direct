@@ -11,20 +11,20 @@ export default function StatCard({ label, value, href }: StatCardProps) {
   const content = (
     <div className="flex flex-col h-full">
       <p
-        className="text-[12px] font-medium mb-2"
-        style={{ color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: "0.04em" }}
+        className="text-[11px] font-bold mb-2 uppercase tracking-widest"
+        style={{ color: "var(--ink-muted)" }}
       >
         {label}
       </p>
       <p
-        className="text-[28px] font-semibold leading-none"
+        className="text-[30px] font-bold leading-none"
         style={{ color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}
       >
         {typeof value === "number" ? value.toLocaleString("fr-FR") : value}
       </p>
       {href && (
         <div className="mt-auto pt-3 flex items-center gap-1" style={{ color: "var(--accent-sage)" }}>
-          <span className="text-[11px] font-medium">Voir</span>
+          <span className="text-[11px] font-semibold">Voir</span>
           <ArrowRight size={11} />
         </div>
       )}
@@ -33,11 +33,11 @@ export default function StatCard({ label, value, href }: StatCardProps) {
 
   if (href) {
     return (
-      <Link href={href} className="card-interactive p-4 block" style={{ minHeight: "88px" }}>
+      <Link href={href} className="card-interactive p-5 block" style={{ minHeight: "96px" }}>
         {content}
       </Link>
     );
   }
 
-  return <div className="card p-4" style={{ minHeight: "88px" }}>{content}</div>;
+  return <div className="card p-5" style={{ minHeight: "96px" }}>{content}</div>;
 }

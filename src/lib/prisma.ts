@@ -13,10 +13,15 @@ function createPrismaClient(): PrismaClient {
   }
   const pool = new Pool({ connectionString })
   const adapter = new PrismaPg(pool)
-  return new PrismaClient({
-    adapter,
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  })
+  // Logs SQL bruts désactivés par défaut (bruités dans la console + léger surcoût).
+  // Mettre PRISMA_LOG_QUERIES=true dans .env pour les réactiver ponctuellement.
+  const log: ('query' | 'error' | 'warn')[] =
+    process.env.NODE_ENV === 'development'
+      ? process.env.PRISMA_LOG_QUERIES === 'true'
+        ? ['query', 'error', 'warn']
+        : ['error', 'warn']
+      : ['error']
+  return new PrismaClient({ adapter, log })
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient()

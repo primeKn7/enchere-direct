@@ -2,129 +2,108 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Mail, Phone, MapPin, Globe, Briefcase, AtSign } from "lucide-react";
-
-const categoryLinks = [
-  { href: "/catalogue?category=vehicules", label: "Véhicules" },
-  { href: "/catalogue?category=immobilier", label: "Immobilier" },
-  { href: "/catalogue?category=bijoux", label: "Bijoux / Or" },
-  { href: "/catalogue?category=art", label: "Art / Antiquités" },
-];
-
-const quickLinks = [
-  { href: "/", label: "Accueil" },
-  { href: "/catalogue", label: "Catalogue" },
-  { href: "/comment-ca-marche", label: "Comment ça marche" },
-  { href: "/mentions-legales", label: "Mentions légales" },
-];
+import { Mail, Phone, MapPin } from "lucide-react";
+import { useT } from "@/components/providers/LanguageProvider";
 
 export function Footer() {
+  const t = useT();
+
+  const quickLinks = [
+    { href: "/", label: t("nav.home") },
+    { href: "/catalogue", label: t("nav.catalogue") },
+    { href: "/comment-ca-marche", label: t("nav.howItWorks") },
+    { href: "/mentions-legales", label: t("footer.legal") },
+  ];
+
+  const categoryLinks = [
+    { href: "/catalogue?category=vehicules", label: t("category.vehicules") },
+    { href: "/catalogue?category=immobilier", label: t("category.immobilier") },
+    { href: "/catalogue?category=bijoux", label: t("category.bijoux") },
+    { href: "/catalogue?category=art", label: t("category.art") },
+    { href: "/catalogue?category=electronique", label: t("category.electronique") },
+  ];
+
   return (
-    <footer
-      className="border-t"
-      style={{
-        background: "var(--accent)",
-        borderColor: "rgba(255,255,255,0.1)",
-      }}
-    >
-      <div className="container-app py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
-          <div>
+    <footer style={{ background: "var(--encre)" }}>
+      <div className="container-app pt-12 pb-10 md:pt-24 md:pb-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-8 md:gap-10 mb-8 md:mb-12">
+          {/* Brand */}
+          <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-3 mb-4">
               <Image
                 src="/images/encheredirect_logo.png"
                 alt="EnchèreDirect"
                 width={32}
                 height={32}
-                className="h-8 w-auto opacity-100"
-                style={{ opacity: 1 }}
+                className="h-8 w-auto"
               />
-              <span className="text-lg font-semibold text-white">
-                EnchèreDirect
-              </span>
+              <span className="text-[16px] font-bold text-white">EnchèreDirect</span>
             </div>
-            <p className="text-sm text-white/80">
-              Plateforme officielle de vente aux enchères pour les objets saisis et les ventes publiques.
+            <p className="text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.60)" }}>
+              {t("footer.tagline")}
             </p>
           </div>
 
+          {/* Quick links */}
           <div>
-            <h4 className="text-base font-semibold text-[var(--accent)] mb-4">
-              Liens rapides
-            </h4>
-            <nav className="flex flex-col gap-2">
+            <p className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: "var(--accent-gold)" }}>
+              {t("footer.navigation")}
+            </p>
+            <nav className="flex flex-col gap-2.5">
               {quickLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="text-sm text-white/80 hover:text-[var(--accent)] transition-colors"
-                >
+                <Link key={link.href} href={link.href} className="text-[13px] transition-colors footer-link">
                   {link.label}
                 </Link>
               ))}
             </nav>
           </div>
 
+          {/* Categories */}
           <div>
-            <h4 className="text-base font-semibold text-[var(--accent)] mb-4">
-              Catégories
-            </h4>
-            <nav className="flex flex-col gap-2">
+            <p className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: "var(--accent-gold)" }}>
+              {t("footer.categories")}
+            </p>
+            <nav className="flex flex-col gap-2.5">
               {categoryLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="text-sm text-white/80 hover:text-[var(--accent)] transition-colors"
-                >
+                <Link key={link.href} href={link.href} className="text-[13px] transition-colors footer-link">
                   {link.label}
                 </Link>
               ))}
             </nav>
           </div>
 
-          <div>
-            <h4 className="text-base font-semibold text-[var(--accent)] mb-4">
-              Contact
-            </h4>
-            <div className="flex flex-col gap-3 text-sm text-white/80">
-              <p className="flex items-center gap-2">
-                <Mail size={16} /> contact@encheredirect.com
+          {/* Contact */}
+          <div className="col-span-2 md:col-span-1">
+            <p className="text-[11px] font-bold uppercase tracking-widest mb-4" style={{ color: "var(--accent-gold)" }}>
+              {t("footer.contact")}
+            </p>
+            <div className="flex flex-col gap-3 text-[13px]" style={{ color: "rgba(255,255,255,0.65)" }}>
+              <p className="flex items-center gap-2.5">
+                <Mail size={14} style={{ color: "var(--accent-gold)" }} />
+                contact@encheredirect.com
               </p>
-              <p className="flex items-center gap-2">
-                <Phone size={16} /> +229 XX XX XX XX
+              <p className="flex items-center gap-2.5">
+                <Phone size={14} style={{ color: "var(--accent-gold)" }} />
+                +229 XX XX XX XX
               </p>
-              <p className="flex items-center gap-2">
-                <MapPin size={16} /> Cotonou, Bénin
+              <p className="flex items-center gap-2.5">
+                <MapPin size={14} style={{ color: "var(--accent-gold)" }} />
+                Cotonou, Bénin
               </p>
-            </div>
-            <div className="flex gap-3 mt-4">
-              <a
-                href="#"
-                className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-[var(--accent)] hover:text-[var(--accent)] transition-colors"
-                aria-label="Facebook"
-              >
-                <Globe size={16} />
-              </a>
-              <a
-                href="#"
-                className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-[var(--accent)] hover:text-[var(--accent)] transition-colors"
-                aria-label="LinkedIn"
-              >
-                <Briefcase size={16} />
-              </a>
-              <a
-                href="#"
-                className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-[var(--accent)] hover:text-[var(--accent)] transition-colors"
-                aria-label="X (Twitter)"
-              >
-                <AtSign size={16} />
-              </a>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-white/10 pt-8 text-center text-sm text-white/70">
-          <p>&copy; {new Date().getFullYear()} EnchèreDirect.com - Tous droits réservés</p>
+        {/* Bottom bar */}
+        <div
+          className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-[12px]"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.40)" }}
+        >
+          <p>&copy; {new Date().getFullYear()} EnchèreDirect — {t("footer.copyright")}</p>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full inline-block" style={{ background: "var(--accent-gold)" }} />
+            <span>{t("footer.operational")}</span>
+          </div>
         </div>
       </div>
     </footer>

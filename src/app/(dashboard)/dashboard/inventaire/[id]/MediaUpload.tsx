@@ -4,12 +4,17 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Upload } from "lucide-react";
 
+// Formats réellement acceptés côté serveur (voir /api/biens/[id]/medias).
 const MEDIA_TYPES = [
-  { value: "PHOTO", label: "Photo HD", accept: "image/*" },
-  { value: "VIDEO", label: "Vidéo HD", accept: "video/*" },
-  { value: "VUE_360", label: "Vue 360°", accept: "image/*" },
-  { value: "VISITE_VIRTUELLE", label: "Visite virtuelle", accept: "video/*" },
+  { value: "PHOTO", label: "Photo HD", accept: "image/jpeg,image/png,image/webp" },
+  { value: "VIDEO", label: "Vidéo HD", accept: "video/mp4,video/webm" },
+  { value: "VUE_360", label: "Vue 360°", accept: "image/jpeg,image/png,image/webp" },
+  { value: "VISITE_VIRTUELLE", label: "Visite virtuelle", accept: "video/mp4,video/webm" },
 ];
+
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 Mo (identique au serveur)
+const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp"];
+const VIDEO_MIMES = ["video/mp4", "video/webm"];
 
 export default function MediaUpload({ bienId }: { bienId: string }) {
   const router = useRouter();
@@ -30,6 +35,29 @@ export default function MediaUpload({ bienId }: { bienId: string }) {
     setSuccess(false);
 
     const fd = new FormData(e.currentTarget);
+    const file = fd.get("file") as File | null;
+
+    // Validation immédiate (évite un aller-retour serveur qui échoue).
+    if (file && file.size > 0) {
+      const isVideo = selectedType === "VIDEO" || selectedType === "VISITE_VIRTUELLE";
+      const allowed = isVideo ? VIDEO_MIMES : IMAGE_MIMES;
+      if (file.size > MAX_FILE_SIZE) {
+        setError(
+          `Fichier trop volumineux (${(file.size / 1024 / 1024).toFixed(0)} Mo). Maximum : 100 Mo.`
+        );
+        setLoading(false);
+        return;
+      }
+      if (file.type && !allowed.includes(file.type)) {
+        setError(
+          isVideo
+            ? `Format vidéo non supporté (${file.type || "inconnu"}). Utilisez du MP4 (H.264) ou WebM — pas de .mov, .avi ni .mkv.`
+            : `Format image non supporté (${file.type || "inconnu"}). Utilisez JPEG, PNG ou WebP.`
+        );
+        setLoading(false);
+        return;
+      }
+    }
 
     try {
       const res = await fetch(`/api/biens/${bienId}/medias`, {
@@ -101,6 +129,11 @@ export default function MediaUpload({ bienId }: { bienId: string }) {
             className="input text-sm"
             style={{ lineHeight: "28px" }}
           />
+          <p className="text-xs text-[var(--ink-muted)] mt-1">
+            {selectedType === "VIDEO" || selectedType === "VISITE_VIRTUELLE"
+              ? "MP4 (H.264) ou WebM, 100 Mo max. La résolution n'a pas d'importance."
+              : "JPEG, PNG ou WebP, 100 Mo max."}
+          </p>
         </div>
 
         <button

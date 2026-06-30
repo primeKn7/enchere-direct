@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Calendar,
 } from "lucide-react";
+import CreateUserForm from "./CreateUserForm";
 
 type Utilisateur = {
   id: string;
@@ -36,6 +37,7 @@ const roleLabels: Record<string, string> = {
   MAGISTRAT: "Magistrat",
   DOUANIER: "Douanier",
   TRESOR_PUBLIC: "Trésor Public",
+  EXPERT: "Expert",
   ADMINISTRATEUR: "Administrateur",
 };
 
@@ -122,6 +124,13 @@ export default function UtilisateursPage() {
         </div>
       )}
 
+      <CreateUserForm
+        onCreated={() => {
+          setMessage({ type: "success", text: "Utilisateur créé." });
+          fetchUtilisateurs();
+        }}
+      />
+
       <div className="glass-surface p-4 mb-6">
         <form onSubmit={handleSearch} className="flex flex-wrap gap-3">
           <div className="flex items-center gap-2 flex-1 min-w-[200px]">
@@ -153,7 +162,7 @@ export default function UtilisateursPage() {
           <RefreshCw className="animate-spin text-[var(--accent)]" size={24} />
         </div>
       ) : (
-        <div className="table-wrapper overflow-hidden">
+        <div className="table-wrapper">
           <table className="table">
             <thead>
               <tr>
